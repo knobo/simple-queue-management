@@ -1,5 +1,11 @@
 package com.example.simplequeue.infrastructure
 
+import com.example.simplequeue.domain.model.Queue
+import com.example.simplequeue.domain.model.QueueMember
+import com.example.simplequeue.domain.model.UserPreference
+import com.example.simplequeue.domain.port.QueueMemberRepository
+import com.example.simplequeue.domain.port.QueueRepository
+import com.example.simplequeue.domain.port.UserPreferenceRepository
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
@@ -12,11 +18,45 @@ import org.springframework.security.web.SecurityFilterChain
 
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken
+import java.util.UUID
 
 @TestConfiguration
 @EnableWebSecurity
 @EnableMethodSecurity
 class TestSecurityConfig {
+
+    /**
+     * Stub implementation of QueueRepository for tests.
+     * Queue functionality was moved to a separate service, but SubscriptionService
+     * still has a dependency on this for backward compatibility.
+     */
+    @Bean
+    @Primary
+    fun testQueueRepository(): QueueRepository = object : QueueRepository {
+        override fun save(queue: Queue) {}
+        override fun findById(id: UUID): Queue? = null
+        override fun findByName(name: String): Queue? = null
+        override fun findByOwnerId(ownerId: String): List<Queue> = emptyList()
+        override fun delete(id: UUID) {}
+        override fun findQueuesNeedingTokenRotation(): List<Queue> = emptyList()
+    }
+
+    /**
+     * Stub implementation of QueueMemberRepository for tests.
+     * Queue functionality was moved to a separate service, but SubscriptionService
+     * still has a dependency on this for backward compatibility.
+     */
+    @Bean
+    @Primary
+    fun testQueueMemberRepository(): QueueMemberRepository = object : QueueMemberRepository {
+        override fun save(member: QueueMember) {}
+        override fun findById(id: UUID): QueueMember? = null
+        override fun findByQueueId(queueId: UUID): List<QueueMember> = emptyList()
+        override fun findByUserId(userId: String): List<QueueMember> = emptyList()
+        override fun findByQueueIdAndUserId(queueId: UUID, userId: String): QueueMember? = null
+        override fun delete(id: UUID) {}
+        override fun countByQueueId(queueId: UUID): Int = 0
+    }
 
     @Bean
     @Primary

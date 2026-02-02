@@ -54,8 +54,8 @@ jobs:
           context: .
           push: true
           tags: ghcr.io/knobo/simple-queue-management:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          provenance: false
+          sbom: false
       
       - name: Notify Kubernetes to Deploy
         run: |
