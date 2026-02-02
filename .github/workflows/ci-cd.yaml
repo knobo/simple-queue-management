@@ -1,4 +1,4 @@
-name: CI/CD
+name: CI/CD - Management Platform
 
 on:
   push:
@@ -7,6 +7,10 @@ on:
     branches: [ "main" ]
   workflow_dispatch:  # Allow manual triggering
   workflow_call:      # Allow other workflows to call this
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: knobo/simple-queue-management
 
 jobs:
   test:
@@ -38,7 +42,7 @@ jobs:
       - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Set up Docker Buildx
@@ -48,7 +52,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/knobo/simple-queue:latest
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
       
@@ -60,10 +64,26 @@ jobs:
           
           # Send notification with commit message
           # Format: "commit_message (short_sha)"
-          curl -X POST https://ntfy.knobo.no/k8s-deploy \
+          curl -X POST https://ntfy.knobo.no/k8s-deploy-management \
             -H "Authorization: Bearer ${{ secrets.NTFY_DEPLOY_TOKEN }}" \
-            -H "Title: Deploy simple-queue" \
+            -H "Title: Deploy Management Platform" \
             -H "Tags: rocket" \
             -d "${COMMIT_MSG} (${SHORT_SHA})" \
+            --fail --silent --show-error
+        continue-on-error: true
+
+  deploy:
+    name: Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    needs: build-image
+    if: github.event_name != 'pull_request'
+    steps:
+      - name: Deploy to K8s via ntfy
+        run: |
+          curl -X POST https://ntfy.knobo.no/k8s-deploy-management \
+            -H "Authorization: Bearer ${{ secrets.NTFY_DEPLOY_TOKEN }}" \
+            -H "Title: Redeploy Management" \
+            -H "Tags: rocket,management" \
+            -d "Manual redeploy requested" \
             --fail --silent --show-error
         continue-on-error: true
