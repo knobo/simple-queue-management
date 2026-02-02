@@ -8,6 +8,11 @@ on:
   workflow_dispatch:  # Allow manual triggering
   workflow_call:      # Allow other workflows to call this
 
+# Top-level permissions for GITHUB_TOKEN
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   test:
     name: Run Tests
