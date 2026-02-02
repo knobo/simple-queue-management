@@ -37,7 +37,7 @@ open class SecurityConfig(
             .csrf { it.disable() }
             .authorizeHttpRequests { auth ->
                 auth
-                    .requestMatchers("/", "/signup", "/public/**", "/api/public/**", "/q/**", "/css/**", "/js/**", "/images/**", "/favicon.ico", "/error").permitAll()
+                    .requestMatchers("/", "/signup", "/public/**", "/api/public/**", "/q/**", "/css/**", "/js/**", "/images/**", "/favicon.ico", "/error", "/actuator/**").permitAll()
                     // Allow viewing invite info and declining without auth
                     .requestMatchers(
                         org.springframework.http.HttpMethod.GET,
