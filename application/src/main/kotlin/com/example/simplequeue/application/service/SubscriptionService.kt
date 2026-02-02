@@ -127,8 +127,7 @@ class SubscriptionService(
      * Note: Only available when queueRepository is configured (Queue Core service).
      */
     fun canCreateQueue(userId: String): Boolean {
-        val repo = queueRepository
-            ?: throw IllegalStateException("Queue operations not available in Management Platform. Use Queue Core service.")
+        val repo = queueRepository ?: return true  // Allow if can't check (Management Platform)
         val limit = getTierLimitForUser(userId)
         val currentQueues = repo.findByOwnerId(userId).size
         return limit.canCreateQueue(currentQueues)
@@ -139,8 +138,7 @@ class SubscriptionService(
      * Note: Only available when queueMemberRepository is configured (Queue Core service).
      */
     fun canInviteOperator(userId: String, queueId: UUID): Boolean {
-        val repo = queueMemberRepository
-            ?: throw IllegalStateException("Queue operations not available in Management Platform. Use Queue Core service.")
+        val repo = queueMemberRepository ?: return true  // Allow if can't check (Management Platform)
         val limit = getTierLimitForUser(userId)
         val currentMembers = repo.countByQueueId(queueId)
         return limit.canAddOperator(currentMembers)
@@ -151,8 +149,7 @@ class SubscriptionService(
      * Note: Only available when queueRepository is configured (Queue Core service).
      */
     fun getQueueCount(userId: String): Int {
-        val repo = queueRepository
-            ?: throw IllegalStateException("Queue operations not available in Management Platform. Use Queue Core service.")
+        val repo = queueRepository ?: return 0  // Not available in Management Platform
         return repo.findByOwnerId(userId).size
     }
 
@@ -161,8 +158,7 @@ class SubscriptionService(
      * Note: Only available when queueMemberRepository is configured (Queue Core service).
      */
     fun getOperatorCount(queueId: UUID): Int {
-        val repo = queueMemberRepository
-            ?: throw IllegalStateException("Queue operations not available in Management Platform. Use Queue Core service.")
+        val repo = queueMemberRepository ?: return 0  // Not available in Management Platform
         return repo.countByQueueId(queueId)
     }
 
