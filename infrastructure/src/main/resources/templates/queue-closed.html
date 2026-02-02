@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <title th:text="#{error.queueClosed.title} + ' - Simple Queue'">Queue Closed - Simple Queue</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            padding: 20px; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            background-color: #f0f2f5; 
+        }
+        .language-selector { 
+            position: absolute; 
+            top: 10px; 
+            right: 20px; 
+        }
+        .language-selector a { 
+            text-decoration: none; 
+            font-size: 1.5em; 
+            margin-left: 5px; 
+            opacity: 0.6; 
+        }
+        .language-selector a.active { 
+            opacity: 1; 
+        }
+        .language-selector a:hover { 
+            opacity: 1; 
+        }
+        .card { 
+            background: white; 
+            padding: 40px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+            width: 100%; 
+            max-width: 500px; 
+            text-align: center; 
+        }
+        .icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: #dc2626;
+            margin-bottom: 10px;
+            font-size: 1.8em;
+        }
+        p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+        }
+        .message {
+            background: #fef2f2;
+            border-left: 4px solid #dc2626;
+            padding: 15px;
+            border-radius: 4px;
+            text-align: left;
+            margin: 20px 0;
+        }
+        .message p {
+            margin: 0;
+            color: #991b1b;
+        }
+        .home-link {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 12px 24px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+        .home-link:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div th:replace="~{fragments/language-selector :: selector}"></div>
+            <script th:replace="~{fragments/language-selector :: script}"></script>
+
+    <div class="card">
+        <div class="icon">🔒</div>
+        <h2 th:text="#{error.queueClosed.title}">Queue Closed</h2>
+        <p th:text="#{error.queueClosed.message}">Sorry, this queue is currently closed. Please try again later.</p>
+        
+        <div class="message">
+            <p th:text="#{error.queueClosed.hint}">The queue owner will open it when they're ready to serve customers.</p>
+        </div>
+        
+        <a href="/" class="home-link" th:text="#{error.goHome}">← Go to homepage</a>
+    </div>
+</body>
+</html>

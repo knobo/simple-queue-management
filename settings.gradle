@@ -1,0 +1,4 @@
+rootProject.name = 'simple-queue'
+include 'domain'
+include 'application'
+include 'infrastructure'

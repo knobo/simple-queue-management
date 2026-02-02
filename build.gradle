@@ -1,0 +1,54 @@
+plugins {
+    id 'org.springframework.boot' version '3.3.5' apply false
+    id 'io.spring.dependency-management' version '1.1.7' apply false
+    id 'org.jetbrains.kotlin.jvm' version '2.1.0' apply false
+    id 'org.jetbrains.kotlin.plugin.spring' version '2.1.0' apply false
+    id 'org.jetbrains.kotlin.plugin.allopen' version '2.1.0' apply false
+    id 'java'
+}
+
+allprojects {
+    group = 'com.example.simplequeue'
+    version = '0.0.1-SNAPSHOT'
+
+    repositories {
+        mavenCentral()
+    }
+}
+
+subprojects {
+    apply plugin: 'kotlin'
+    apply plugin: 'kotlin-spring' // This includes all-open for @Component, @Configuration etc.
+    apply plugin: 'io.spring.dependency-management'
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(21)
+        }
+    }
+    
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
+        kotlinOptions {
+            freeCompilerArgs = ['-Xjsr305=strict']
+            jvmTarget = '21'
+        }
+    }
+
+    test {
+        useJUnitPlatform()
+    }
+
+    dependencyManagement {
+        imports {
+            // testcontainers-bom MUST come first to override Spring Boot's older version
+            mavenBom "org.testcontainers:testcontainers-bom:1.20.4"
+            mavenBom "org.springframework.boot:spring-boot-dependencies:3.4.1"
+            mavenBom "org.jetbrains.kotlin:kotlin-bom:2.1.0"
+        }
+    }
+    
+    dependencies {
+        implementation 'org.jetbrains.kotlin:kotlin-reflect:2.1.0'
+        implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.1.0'
+    }
+}

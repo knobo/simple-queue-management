@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <title th:text="#{admin.title} + ' - Simple Queue'">Queue Admin - Simple Queue</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .language-selector a { text-decoration: none; font-size: 1.5em; margin-left: 5px; opacity: 0.6; }
+        .language-selector a.active { opacity: 1; }
+        .language-selector a:hover { opacity: 1; }
+        .queue-card { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
+        .btn { padding: 5px 10px; color: white; text-decoration: none; border-radius: 3px; border: none; cursor: pointer; font-size: 0.9em; display: inline-block;}
+        .btn-primary { background-color: #007bff; }
+        .btn-danger { background-color: #dc3545; }
+        .btn-secondary { background-color: #6c757d; }
+        .header-actions { display: flex; align-items: center; gap: 15px; }
+        .logout-btn { background: none; border: none; cursor: pointer; font-size: 1.2em; opacity: 0.6; padding: 5px; }
+        .logout-btn:hover { opacity: 1; }
+        .selected-mode { background: #e7f3ff; border-color: #007bff !important; }
+    </style>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+
+    <script th:inline="javascript">
+        const i18n = {
+            confirmDelete: /*[[#{admin.confirmDelete}]]*/ 'Are you sure you want to delete this queue? It must be empty.',
+            queueDeleted: /*[[#{admin.queueDeleted}]]*/ 'Queue deleted successfully!',
+            failedToDelete: /*[[#{admin.failedToDelete}]]*/ 'Failed to delete queue',
+            confirmRemoveState: /*[[#{admin.confirmRemoveState}]]*/ 'Remove this state?',
+            failedToRemoveState: /*[[#{admin.failedToRemoveState}]]*/ 'Failed to remove state',
+            failedToAddState: /*[[#{admin.failedToAddState}]]*/ 'Failed to add state',
+            ticketPageModeUpdated: /*[[#{admin.ticketPageModeUpdated}]]*/ 'Ticket page settings updated!',
+            failedToUpdateTicketPageMode: /*[[#{admin.failedToUpdateTicketPageMode}]]*/ 'Failed to update ticket page settings',
+            accessTokenModeUpdated: /*[[#{admin.accessTokenModeUpdated}]]*/ 'QR code mode updated!',
+            failedToUpdateAccessTokenMode: /*[[#{admin.failedToUpdateAccessTokenMode}]]*/ 'Failed to update QR code mode',
+            // Counter i18n
+            confirmDeleteCounter: /*[[#{admin.confirmDeleteCounter}]]*/ 'Are you sure you want to delete this counter?',
+            failedToAddCounter: /*[[#{admin.failedToAddCounter}]]*/ 'Failed to add counter',
+            failedToDeleteCounter: /*[[#{admin.failedToDeleteCounter}]]*/ 'Failed to delete counter',
+            counterDeleted: /*[[#{admin.counterDeleted}]]*/ 'Counter deleted',
+            counterAdded: /*[[#{admin.counterAdded}]]*/ 'Counter added',
+            // Member i18n
+            confirmRevokeInvite: /*[[#{admin.confirmRevokeInvite}]]*/ 'Are you sure you want to revoke this invitation?',
+            confirmRemoveMember: /*[[#{admin.confirmRemoveMember}]]*/ 'Are you sure you want to remove this team member?',
+            failedToSendInvite: /*[[#{admin.failedToSendInvite}]]*/ 'Failed to send invitation',
+            failedToRevokeInvite: /*[[#{admin.failedToRevokeInvite}]]*/ 'Failed to revoke invitation',
+            failedToRemoveMember: /*[[#{admin.failedToRemoveMember}]]*/ 'Failed to remove member',
+            failedToUpdateRole: /*[[#{admin.failedToUpdateRole}]]*/ 'Failed to update role',
+            inviteSentSuccess: /*[[#{admin.inviteSentSuccess}]]*/ 'Invitation sent!',
+            memberRemoved: /*[[#{admin.memberRemoved}]]*/ 'Member removed',
+            roleUpdated: /*[[#{admin.roleUpdated}]]*/ 'Role updated'
+        };
+
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('adminQueueManager', (id) => ({
+                id: id,
+                newStateName: '',
+                newStateStatus: 'WAITING',
+                
+                // Counter state
+                counters: [],
+                newCounterName: '',
+                loadingCounters: false,
+                
+                // Member state
+                members: [],
+                invites: [],
+                newInviteEmail: '',
+                newInviteRole: 'OPERATOR',
+                loadingMembers: false,
+                
+                // Toast notification
+                toast: { show: false, message: '', type: 'success' },
+
+                async init() {
+                    await Promise.all([
+                        this.loadCounters(),
+                        this.loadMembers(),
+                        this.loadInvites()
+                    ]);
+                },
+
+                showToast(message, type = 'success') {
+                    this.toast = { show: true, message, type };
+                    setTimeout(() => { this.toast.show = false; }, 3000);
+                },
+
+                // ==================== Counter Methods ====================
+
+                async loadCounters() {
+                    this.loadingCounters = true;
+                    try {
+                        const response = await fetch(`/api/owner/queues/${this.id}/counters`);
+                        if (response.ok) {
+                            this.counters = await response.json();
+                        }
+                    } catch(e) { console.error(e); }
+                    this.loadingCounters = false;
+                },
+
+                async addCounter() {
+                    try {
+                        const response = await fetch(`/api/owner/queues/${this.id}/counters`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name: this.newCounterName || null })
+                        });
+                        if (response.ok) {
+                            const counter = await response.json();
+                            this.counters.push(counter);
+                            this.newCounterName = '';
+                            this.showToast(i18n.counterAdded);
+                        } else {
+                            this.showToast(i18n.failedToAddCounter, 'error');
+                        }
+                    } catch(e) { 
+                        console.error(e);
+                        this.showToast(i18n.failedToAddCounter, 'error');
+                    }
+                },
+
+                async deleteCounter(counterId) {
+                    if (!confirm(i18n.confirmDeleteCounter)) return;
+                    try {
+                        const response = await fetch(`/api/owner/queues/${this.id}/counters/${counterId}`, {
+                            method: 'DELETE'
+                        });
+                        if (response.ok) {
+                            this.counters = this.counters.filter(c => c.id !== counterId);
+                            this.showToast(i18n.counterDeleted);
+                        } else {
+                            const text = await response.text();
+                            this.showToast(i18n.failedToDeleteCounter + ': ' + text, 'error');
+                        }
+                    } catch(e) { 
+                        console.error(e);
+                        this.showToast(i18n.failedToDeleteCounter, 'error');
+                    }
+                },
+
+                // ==================== Member Methods ====================
+
+                async loadMembers() {
+                    this.loadingMembers = true;
+                    try {
+                        const response = await fetch(`/api/owner/queues/${this.id}/members`);
+                        if (response.ok) {
+                            this.members = await response.json();
+                        }
+                    } catch(e) { console.error(e); }
+                    this.loadingMembers = false;
+                },
+
+                async loadInvites() {
+                    try {
+                        const response = await fetch(`/api/owner/queues/${this.id}/invites`);
+                        if (response.ok) {
+                            this.invites = await response.json();
+                        }
+                    } catch(e) { console.error(e); }
+                },
+
+                async sendInvite() {
+                    if (!this.newInviteEmail) return;
+                    try {
+                        const response = await fetch(`/api/owner/queues/${this.id}/invites`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                email: this.newInviteEmail, 
+                                role: this.newInviteRole 
+                            })
+                        });
+                        if (response.ok) {
+                            const invite = await response.json();
+                            this.invites.push(invite);
+                            this.newInviteEmail = '';
+                            this.showToast(i18n.inviteSentSuccess);
+                        } else {
+                            const text = await response.text();
+                            this.showToast(i18n.failedToSendInvite + ': ' + text, 'error');
+                        }
+                    } catch(e) { 
+                        console.error(e);
+                        this.showToast(i18n.failedToSendInvite, 'error');
+                    }
+                },
+
+                async revokeInvite(inviteId) {
+                    if (!confirm(i18n.confirmRevokeInvite)) return;
+                    try {
+                        const response = await fetch(`/api/owner/queues/${this.id}/invites/${inviteId}`, {
+                            method: 'DELETE'
+                        });
+                        if (response.ok) {
+                            this.invites = this.invites.filter(i => i.id !== inviteId);
+                            this.showToast('Invitation revoked');
+                        } else {
+                            this.showToast(i18n.failedToRevokeInvite, 'error');
+                        }
+                    } catch(e) { 
+                        console.error(e);
+                        this.showToast(i18n.failedToRevokeInvite, 'error');
+                    }
+                },
+
+                async removeMember(memberId) {
+                    if (!confirm(i18n.confirmRemoveMember)) return;
+                    try {
+                        const response = await fetch(`/api/owner/queues/${this.id}/members/${memberId}`, {
+                            method: 'DELETE'
+                        });
+                        if (response.ok) {
+                            this.members = this.members.filter(m => m.id !== memberId);
+                            this.showToast(i18n.memberRemoved);
+                        } else {
+                            this.showToast(i18n.failedToRemoveMember, 'error');
+                        }
+                    } catch(e) { 
+                        console.error(e);
+                        this.showToast(i18n.failedToRemoveMember, 'error');
+                    }
+                },
+
+                async updateMemberRole(memberId, newRole) {
+                    try {
+                        const response = await fetch(`/api/owner/queues/${this.id}/members/${memberId}/role`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ role: newRole })
+                        });
+                        if (response.ok) {
+                            const updated = await response.json();
+                            const idx = this.members.findIndex(m => m.id === memberId);
+                            if (idx !== -1) this.members[idx] = updated;
+                            this.showToast(i18n.roleUpdated);
+                        } else {
+                            this.showToast(i18n.failedToUpdateRole, 'error');
+                        }
+                    } catch(e) { 
+                        console.error(e);
+                        this.showToast(i18n.failedToUpdateRole, 'error');
+                    }
+                },
+
+                formatDate(dateStr) {
+                    return new Date(dateStr).toLocaleDateString();
+                },
+
+                // ==================== Existing Methods ====================
+
+                async deleteQueue() {
+                    if (!confirm(i18n.confirmDelete)) return;
+
+                    try {
+                        const response = await fetch(`/api/owner/queues/${this.id}`, {
+                            method: 'DELETE'
+                        });
+
+                        if (response.ok) {
+                            alert(i18n.queueDeleted);
+                            window.location.href = '/dashboard';
+                        } else {
+                            const errorText = await response.text();
+                            alert(i18n.failedToDelete + ': ' + (errorText || 'Unknown error'));
+                        }
+                    } catch (error) {
+                        console.error('Error deleting queue:', error);
+                        alert('Network error occurred.');
+                    }
+                },
+
+                async addState() {
+                    if (!this.newStateName) return;
+
+                    try {
+                        const response = await fetch(`/api/owner/queues/${this.id}/states`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name: this.newStateName, status: this.newStateStatus })
+                        });
+
+                        if (response.ok) {
+                            window.location.reload();
+                        } else {
+                            alert(i18n.failedToAddState);
+                        }
+                    } catch(e) { console.error(e); }
+                },
+
+                async removeState(stateId) {
+                    if (!confirm(i18n.confirmRemoveState)) return;
+                    try {
+                        const response = await fetch(`/api/owner/queues/${this.id}/states/${stateId}`, {
+                            method: 'DELETE'
+                        });
+                        if (response.ok) {
+                             window.location.reload();
+                        } else {
+                            const text = await response.text();
+                            alert(i18n.failedToRemoveState + ': ' + text);
+                        }
+                    } catch(e) { console.error(e); }
+                },
+
+                async updateTicketPageMode(mode) {
+                    try {
+                        const response = await fetch(`/api/owner/queues/${this.id}/ticket-page-mode`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ ticketPageMode: mode })
+                        });
+                        if (response.ok) {
+                            alert(i18n.ticketPageModeUpdated);
+                        } else {
+                            alert(i18n.failedToUpdateTicketPageMode);
+                        }
+                    } catch(e) { 
+                        console.error(e); 
+                        alert(i18n.failedToUpdateTicketPageMode);
+                    }
+                },
+
+                async updateAccessTokenMode(mode) {
+                    try {
+                        const response = await fetch(`/api/queues/${this.id}/tokens/config`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                mode: mode,
+                                rotationMinutes: mode === 'ROTATING' ? 5 : 0,
+                                expiryMinutes: 60,
+                                maxUses: null
+                            })
+                        });
+                        if (response.ok) {
+                            alert(i18n.accessTokenModeUpdated);
+                            window.location.reload();
+                        } else {
+                            alert(i18n.failedToUpdateAccessTokenMode);
+                        }
+                    } catch(e) { 
+                        console.error(e); 
+                        alert(i18n.failedToUpdateAccessTokenMode);
+                    }
+                }
+            }));
+        });
+    </script>
+</head>
+<body>
+<div class="container" th:attr="x-data='adminQueueManager(\'' + ${queue.id} + '\')'">
+    <div class="header">
+        <h1 th:text="#{admin.title}">Admin & Statistics</h1>
+        <div class="header-actions">
+            <div th:replace="~{fragments/language-selector :: selector}"></div>
+            <script th:replace="~{fragments/language-selector :: script}"></script>
+            <form th:action="@{/logout}" method="post" style="margin: 0;">
+                <button type="submit" class="logout-btn" th:title="#{admin.logout}">🚪</button>
+            </form>
+        </div>
+    </div>
+    <h2><span th:text="${queue.name}">Queue Name</span> - <span th:text="#{admin.settings}">settings</span></h2>
+
+    <!-- Toast notification -->
+    <div x-show="toast.show" 
+         x-transition
+         :class="toast.type === 'error' ? 'toast-error' : 'toast-success'"
+         style="position: fixed; top: 20px; right: 20px; padding: 12px 24px; border-radius: 6px; color: white; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"
+         x-text="toast.message">
+    </div>
+
+    <style>
+        .toast-success { background: #28a745; }
+        .toast-error { background: #dc3545; }
+        .member-table { width: 100%; border-collapse: collapse; }
+        .member-table th, .member-table td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
+        .member-table th { background: #f8f9fa; font-size: 0.85em; text-transform: uppercase; }
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 0.8em; font-weight: 500; }
+        .badge-success { background: #d4edda; color: #155724; }
+        .badge-warning { background: #fff3cd; color: #856404; }
+        .badge-secondary { background: #e2e3e5; color: #383d41; }
+        .badge-primary { background: #cce5ff; color: #004085; }
+    </style>
+
+    <div class="queue-card">
+        <h3 th:text="#{admin.statistics}">Statistics</h3>
+        <p><span th:text="#{admin.totalWaiting}">Total Waiting Tickets</span>: <span th:text="${waitingCount}">0</span></p>
+    </div>
+
+    <!-- Counters Section -->
+    <div class="queue-card">
+        <h3 th:text="#{admin.counters}">Counters</h3>
+        <p th:text="#{admin.countersDescription}">Manage service counters for your queue.</p>
+
+        <!-- Counter list -->
+        <div x-show="loadingCounters" style="padding: 20px; text-align: center; color: #666;">
+            Loading...
+        </div>
+
+        <table x-show="!loadingCounters && counters.length > 0" class="member-table" style="margin-top: 15px;">
+            <thead>
+                <tr>
+                    <th th:text="#{admin.counterNumber}">#</th>
+                    <th th:text="#{admin.name}">Name</th>
+                    <th th:text="#{admin.counterStatus}">Status</th>
+                    <th th:text="#{admin.action}">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <template x-for="counter in counters" :key="counter.id">
+                    <tr>
+                        <td x-text="counter.number"></td>
+                        <td x-text="counter.displayName"></td>
+                        <td>
+                            <span x-show="counter.isServing" class="badge badge-success" th:text="#{admin.counterServing}">Serving</span>
+                            <span x-show="counter.isOccupied && !counter.isServing" class="badge badge-warning" th:text="#{admin.counterInUse}">In Use</span>
+                            <span x-show="!counter.isOccupied" class="badge badge-secondary" th:text="#{admin.counterAvailable}">Available</span>
+                        </td>
+                        <td>
+                            <button class="btn btn-danger" 
+                                    style="padding: 4px 10px; font-size: 0.85em;"
+                                    @click="deleteCounter(counter.id)"
+                                    :disabled="counter.isOccupied || counter.isServing"
+                                    th:text="#{admin.remove}">Remove</button>
+                        </td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+
+        <div x-show="!loadingCounters && counters.length === 0" 
+             style="padding: 20px; text-align: center; color: #666; background: #f8f9fa; border-radius: 6px; margin-top: 15px;"
+             th:text="#{admin.noCounters}">
+            No counters yet.
+        </div>
+
+        <!-- Add counter form -->
+        <div style="margin-top: 20px; display: flex; gap: 10px; align-items: center;">
+            <input type="text" 
+                   x-model="newCounterName" 
+                   th:placeholder="#{admin.counterNamePlaceholder}"
+                   style="padding: 8px; flex-grow: 1; border: 1px solid #ccc; border-radius: 4px;">
+            <button class="btn btn-primary" @click="addCounter()" th:text="#{admin.addCounter}">Add Counter</button>
+        </div>
+    </div>
+
+    <!-- Team Members Section -->
+    <div class="queue-card">
+        <h3 th:text="#{admin.members}">Team Members</h3>
+        <p th:text="#{admin.membersDescription}">Manage operators and staff who can work on this queue.</p>
+
+        <!-- Members list -->
+        <div x-show="loadingMembers" style="padding: 20px; text-align: center; color: #666;">
+            Loading...
+        </div>
+
+        <table x-show="!loadingMembers && members.length > 0" class="member-table" style="margin-top: 15px;">
+            <thead>
+                <tr>
+                    <th>User ID</th>
+                    <th th:text="#{admin.role}">Role</th>
+                    <th th:text="#{admin.joinedAt}">Joined</th>
+                    <th th:text="#{admin.action}">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <template x-for="member in members" :key="member.id">
+                    <tr>
+                        <td x-text="member.userId.substring(0, 8) + '...'"></td>
+                        <td>
+                            <select x-model="member.role" 
+                                    @change="updateMemberRole(member.id, member.role)"
+                                    style="padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc;">
+                                <option value="GUEST" th:text="#{admin.role.GUEST}">Guest</option>
+                                <option value="OPERATOR" th:text="#{admin.role.OPERATOR}">Operator</option>
+                            </select>
+                        </td>
+                        <td x-text="formatDate(member.joinedAt)"></td>
+                        <td>
+                            <button class="btn btn-danger" 
+                                    style="padding: 4px 10px; font-size: 0.85em;"
+                                    @click="removeMember(member.id)"
+                                    th:text="#{admin.remove}">Remove</button>
+                        </td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+
+        <div x-show="!loadingMembers && members.length === 0" 
+             style="padding: 20px; text-align: center; color: #666; background: #f8f9fa; border-radius: 6px; margin-top: 15px;"
+             th:text="#{admin.noMembers}">
+            No team members yet.
+        </div>
+
+        <!-- Pending Invites -->
+        <div x-show="invites.length > 0" style="margin-top: 25px;">
+            <h4 th:text="#{admin.pendingInvites}">Pending Invites</h4>
+            <table class="member-table">
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th th:text="#{admin.role}">Role</th>
+                        <th th:text="#{admin.inviteStatus}">Status</th>
+                        <th th:text="#{admin.action}">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="invite in invites" :key="invite.id">
+                        <tr>
+                            <td x-text="invite.email"></td>
+                            <td>
+                                <span class="badge badge-primary" x-text="invite.role"></span>
+                            </td>
+                            <td>
+                                <span x-show="invite.status === 'PENDING'" class="badge badge-warning" th:text="#{admin.inviteSent}">Sent</span>
+                                <span x-show="invite.status !== 'PENDING'" class="badge badge-secondary" x-text="invite.status"></span>
+                            </td>
+                            <td>
+                                <button class="btn btn-secondary" 
+                                        style="padding: 4px 10px; font-size: 0.85em;"
+                                        @click="revokeInvite(invite.id)"
+                                        th:text="#{admin.revokeInvite}">Revoke</button>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Invite form -->
+        <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 6px;">
+            <h4 style="margin-top: 0;" th:text="#{admin.inviteOperator}">Invite Operator</h4>
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <input type="email" 
+                       x-model="newInviteEmail" 
+                       th:placeholder="#{admin.inviteEmailPlaceholder}"
+                       style="padding: 8px; flex-grow: 1; min-width: 200px; border: 1px solid #ccc; border-radius: 4px;">
+                <select x-model="newInviteRole" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                    <option value="GUEST" th:text="#{admin.role.GUEST}">Guest</option>
+                    <option value="OPERATOR" th:text="#{admin.role.OPERATOR}">Operator</option>
+                </select>
+                <button class="btn btn-primary" @click="sendInvite()" th:text="#{admin.inviteOperator}">Invite</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="queue-card">
+        <h3 th:text="#{admin.queueStates}">Queue States</h3>
+        <p th:text="#{admin.statesDescription}">Define the workflow steps for your queue.</p>
+
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <thead>
+                <tr style="background: #f8f9fa;">
+                    <th style="padding: 10px; text-align: left;" th:text="#{admin.name}">Name</th>
+                    <th style="padding: 10px; text-align: left;" th:text="#{admin.type}">Type</th>
+                    <th style="padding: 10px; text-align: left;" th:text="#{admin.order}">Order</th>
+                    <th style="padding: 10px; text-align: left;" th:text="#{admin.action}">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="state : ${states}" style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 10px;" th:text="${state.name}">Waiting</td>
+                    <td style="padding: 10px;" th:text="${state.status}">WAITING</td>
+                    <td style="padding: 10px;" th:text="${state.orderIndex}">1</td>
+                    <td style="padding: 10px;">
+                        <button class="btn btn-danger" style="padding: 2px 6px; font-size: 0.8em;"
+                                th:data-id="${state.id}"
+                                @click="removeState($el.dataset.id)"
+                                th:text="#{admin.remove}">Remove</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h4 th:text="#{admin.addNewState}">Add New State</h4>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <input type="text" x-model="newStateName" th:placeholder="#{admin.stateNamePlaceholder}" style="padding: 8px; flex-grow: 1;">
+            <select x-model="newStateStatus" style="padding: 8px;">
+                <option value="WAITING" th:text="#{status.waiting}">WAITING</option>
+                <option value="CALLED" th:text="#{status.called}">SERVING (CALLED)</option>
+                <option value="COMPLETED" th:text="#{status.completed}">DONE (COMPLETED)</option>
+                <option value="CANCELLED" th:text="#{status.cancelled}">CANCELLED</option>
+            </select>
+            <button class="btn btn-primary" @click="addState()" th:text="#{admin.add}">Add</button>
+        </div>
+    </div>
+
+    <div class="queue-card">
+        <h3 th:text="#{admin.ticketPageConfig}">Ticket Page Configuration</h3>
+        <p th:text="#{admin.ticketPageConfigDesc}">Configure how the ticket page displays to customers.</p>
+        
+        <div style="margin-top: 15px;">
+            <label th:text="#{admin.ticketPageMode}" style="font-weight: 500; display: block; margin-bottom: 10px;">Display mode</label>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="radio" name="ticketPageMode" value="BOTH" 
+                           th:checked="${queue.ticketPageMode.name() == 'BOTH'}"
+                           @change="updateTicketPageMode('BOTH')">
+                    <span th:text="#{admin.ticketPageMode.BOTH}">Both (default)</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="radio" name="ticketPageMode" value="QR_ONLY" 
+                           th:checked="${queue.ticketPageMode.name() == 'QR_ONLY'}"
+                           @change="updateTicketPageMode('QR_ONLY')">
+                    <span th:text="#{admin.ticketPageMode.QR_ONLY}">QR code only</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="radio" name="ticketPageMode" value="BUTTON_ONLY" 
+                           th:checked="${queue.ticketPageMode.name() == 'BUTTON_ONLY'}"
+                           @change="updateTicketPageMode('BUTTON_ONLY')">
+                    <span th:text="#{admin.ticketPageMode.BUTTON_ONLY}">Button only</span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div class="queue-card">
+        <h3 th:text="#{admin.accessTokenMode}">QR Code Mode</h3>
+        <p th:text="#{admin.accessTokenModeDesc}">Configure how QR codes work for joining this queue.</p>
+        
+        <div style="margin-top: 15px;">
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; padding: 10px; border: 1px solid #dee2e6; border-radius: 6px;"
+                       th:classappend="${queue.accessTokenMode.name() == 'STATIC'} ? 'selected-mode' : ''">
+                    <input type="radio" name="accessTokenMode" value="STATIC" 
+                           th:checked="${queue.accessTokenMode.name() == 'STATIC'}"
+                           @change="updateAccessTokenMode('STATIC')">
+                    <div>
+                        <strong th:text="#{admin.accessTokenMode.STATIC}">Static QR Code</strong>
+                        <p style="margin: 5px 0 0; font-size: 0.9em; color: #666;" th:text="#{admin.accessTokenMode.STATIC.desc}">
+                            Same QR code works forever. Simple but less secure.
+                        </p>
+                    </div>
+                </label>
+                <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; padding: 10px; border: 1px solid #dee2e6; border-radius: 6px;"
+                       th:classappend="${queue.accessTokenMode.name() == 'ROTATING'} ? 'selected-mode' : ''">
+                    <input type="radio" name="accessTokenMode" value="ROTATING" 
+                           th:checked="${queue.accessTokenMode.name() == 'ROTATING'}"
+                           @change="updateAccessTokenMode('ROTATING')">
+                    <div>
+                        <strong th:text="#{admin.accessTokenMode.ROTATING}">Rotating QR Code</strong>
+                        <p style="margin: 5px 0 0; font-size: 0.9em; color: #666;" th:text="#{admin.accessTokenMode.ROTATING.desc}">
+                            QR code changes automatically. Prevents sharing old codes.
+                        </p>
+                    </div>
+                </label>
+                <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; padding: 10px; border: 1px solid #dee2e6; border-radius: 6px;"
+                       th:classappend="${queue.accessTokenMode.name() == 'TIME_LIMITED'} ? 'selected-mode' : ''">
+                    <input type="radio" name="accessTokenMode" value="TIME_LIMITED" 
+                           th:checked="${queue.accessTokenMode.name() == 'TIME_LIMITED'}"
+                           @change="updateAccessTokenMode('TIME_LIMITED')">
+                    <div>
+                        <strong th:text="#{admin.accessTokenMode.TIME_LIMITED}">Time-Limited QR Code</strong>
+                        <p style="margin: 5px 0 0; font-size: 0.9em; color: #666;" th:text="#{admin.accessTokenMode.TIME_LIMITED.desc}">
+                            QR code expires after a set time. Best for daily use.
+                        </p>
+                    </div>
+                </label>
+            </div>
+        </div>
+        
+        <!-- Warning for non-static modes -->
+        <div th:if="${queue.accessTokenMode.name() != 'STATIC'}" 
+             style="margin-top: 15px; padding: 10px; background: #fff3cd; border-radius: 6px; font-size: 0.9em; color: #856404;">
+            ⚠️ <span th:text="#{admin.dynamicModeWarning}">Dynamic QR codes require using the display/kiosk screens. Old static QR codes will not work.</span>
+        </div>
+    </div>
+
+    <div class="queue-card" style="border-color: #dc3545;">
+        <h3 style="color: #dc3545;" th:text="#{admin.dangerZone}">Danger Zone</h3>
+        <p th:text="#{admin.deleteWarning}">Deleting the queue is irreversible. The queue must be empty (0 waiting tickets) to be deleted.</p>
+        <button type="button" class="btn btn-danger" @click="deleteQueue()" th:text="#{admin.deleteQueue}">Delete Queue</button>
+    </div>
+
+    <br>
+    <a href="/dashboard" class="btn btn-secondary" th:text="#{admin.backToDashboard}">Back to Dashboard</a>
+</div>
+</body>
+</html>

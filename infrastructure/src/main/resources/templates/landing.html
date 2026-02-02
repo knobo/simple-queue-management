@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <title th:text="#{landing.title}">Simple Queue - Professional Queue Management</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #fff;
+        }
+
+        /* Navigation */
+        .navbar {
+            background: #fff;
+            border-bottom: 1px solid #eaeaea;
+            padding: 1rem 2rem;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #555;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: #007bff;
+        }
+
+        .btn-nav {
+            padding: 0.5rem 1.25rem;
+            background: #007bff;
+            color: white !important;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .btn-nav:hover {
+            background: #0056b3;
+        }
+
+        .btn-nav-outline {
+            padding: 0.5rem 1.25rem;
+            background: transparent;
+            color: #007bff !important;
+            border: 2px solid #007bff;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .btn-nav-outline:hover {
+            background: #007bff;
+            color: white !important;
+        }
+
+        .nav-auth-buttons {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .language-selector {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .language-selector a {
+            text-decoration: none;
+            font-size: 1.25em;
+            opacity: 0.6;
+        }
+
+        .language-selector a.active {
+            opacity: 1;
+        }
+
+        .language-selector a:hover {
+            opacity: 1;
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 8rem 2rem 4rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+        }
+
+        .hero-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            margin-bottom: 2rem;
+            opacity: 0.95;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: #fff;
+            color: #667eea;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+
+        .btn-secondary:hover {
+            background: white;
+            color: #667eea;
+        }
+
+        /* How It Works Section */
+        .how-it-works {
+            padding: 5rem 2rem;
+            background: #f8f9fa;
+        }
+
+        .section-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 3rem;
+            color: #222;
+        }
+
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+        }
+
+        .step {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+        }
+
+        .step:hover {
+            transform: translateY(-5px);
+        }
+
+        .step-number {
+            width: 50px;
+            height: 50px;
+            background: #007bff;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0 auto 1rem;
+        }
+
+        .step h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.75rem;
+            color: #222;
+        }
+
+        .step p {
+            color: #666;
+            font-size: 0.95rem;
+        }
+
+        /* Pricing Section */
+        .pricing {
+            padding: 5rem 2rem;
+            background: white;
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .pricing-card {
+            background: white;
+            border: 2px solid #eaeaea;
+            border-radius: 16px;
+            padding: 2.5rem;
+            text-align: center;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .pricing-card:hover {
+            border-color: #007bff;
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        .pricing-card.featured {
+            border-color: #007bff;
+            transform: scale(1.05);
+        }
+
+        .pricing-card.featured:hover {
+            transform: scale(1.05) translateY(-5px);
+        }
+
+        .badge {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #007bff;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .pricing-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: #222;
+        }
+
+        .price {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #007bff;
+            margin: 1rem 0;
+        }
+
+        .price span {
+            font-size: 1rem;
+            color: #666;
+            font-weight: 400;
+        }
+
+        .pricing-card p {
+            color: #666;
+            margin-bottom: 1.5rem;
+        }
+
+        .features {
+            list-style: none;
+            text-align: left;
+            margin-bottom: 2rem;
+        }
+
+        .features li {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f0f0f0;
+            color: #555;
+            display: flex;
+            align-items: center;
+        }
+
+        .features li:last-child {
+            border-bottom: none;
+        }
+
+        .features li::before {
+            content: "✓";
+            color: #28a745;
+            font-weight: bold;
+            margin-right: 0.75rem;
+        }
+
+        .btn-pricing {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid #007bff;
+            background: transparent;
+            color: #007bff;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-pricing:hover {
+            background: #007bff;
+            color: white;
+        }
+
+        .pricing-card.featured .btn-pricing {
+            background: #007bff;
+            color: white;
+        }
+
+        .pricing-card.featured .btn-pricing:hover {
+            background: #0056b3;
+            border-color: #0056b3;
+        }
+
+        /* Features Section */
+        .features-section {
+            padding: 5rem 2rem;
+            background: #f8f9fa;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .feature-item {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .feature-item h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.75rem;
+            color: #222;
+        }
+
+        .feature-item p {
+            color: #666;
+            font-size: 0.95rem;
+        }
+
+        /* Footer */
+        .footer {
+            background: #222;
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .footer-links a {
+            color: #aaa;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: white;
+        }
+
+        .footer p {
+            color: #666;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .hero p {
+                font-size: 1rem;
+            }
+
+            .nav-links {
+                gap: 0.5rem;
+            }
+
+            .nav-links > a:not(.btn-nav):not(.btn-nav-outline) {
+                display: none;
+            }
+
+            .language-selector {
+                display: none;
+            }
+
+            .nav-auth-buttons {
+                display: flex;
+                gap: 0.5rem;
+            }
+
+            .nav-auth-buttons .btn-nav,
+            .nav-auth-buttons .btn-nav-outline {
+                padding: 0.4rem 0.8rem;
+                font-size: 0.85rem;
+            }
+
+            .pricing-card.featured {
+                transform: none;
+            }
+
+            .pricing-card.featured:hover {
+                transform: translateY(-5px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="logo" th:text="#{app.name}">Simple Queue</a>
+            <div class="nav-links">
+                <a href="#how-it-works" th:text="#{nav.howItWorks}">How It Works</a>
+                <a href="#pricing" th:text="#{nav.pricing}">Pricing</a>
+                <a href="#features" th:text="#{nav.features}">Features</a>
+                <div th:replace="~{fragments/language-selector :: selector}"></div>
+            <script th:replace="~{fragments/language-selector :: script}"></script>
+                <div class="nav-auth-buttons">
+                    <a href="/oauth2/authorization/keycloak" class="btn-nav-outline" th:text="#{nav.login}">Log In</a>
+                    <a href="/signup" class="btn-nav" th:text="#{nav.getStarted}">Get Started</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Active Tickets Section (shown via JavaScript if user has stored tickets) -->
+    <div id="active-tickets-section" style="display: none; padding-top: 5rem;">
+        <div class="section-container">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px; padding: 2rem; color: white;">
+                <h2 style="text-align: center; margin-bottom: 1.5rem; font-size: 1.75rem;">🎫 Your Active Tickets</h2>
+                <div id="tickets-list" style="display: grid; gap: 1rem; max-width: 800px; margin: 0 auto;">
+                    <!-- Tickets will be rendered here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // === Multi-Ticket LocalStorage Management ===
+        (function() {
+            const OLD_STORAGE_KEY = 'simplequeue_ticket';
+            const STORAGE_KEY = 'simplequeue_tickets';
+            const ONE_HOUR_MS = 60 * 60 * 1000;
+            
+            // Migration: Convert old single ticket to array format
+            function migrateOldTicket() {
+                const oldData = localStorage.getItem(OLD_STORAGE_KEY);
+                if (oldData) {
+                    try {
+                        const old = JSON.parse(oldData);
+                        const migrated = {
+                            queueId: old.queueId || null,
+                            ticketId: String(old.ticketId),
+                            number: old.number || null,
+                            code: old.code,
+                            createdAt: old.savedAt || Date.now(),
+                            queueName: old.queueName
+                        };
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify([migrated]));
+                        localStorage.removeItem(OLD_STORAGE_KEY);
+                        console.log('[SimpleQueue] Migrated old ticket to array format');
+                    } catch (e) {
+                        console.warn('[SimpleQueue] Failed to migrate old ticket', e);
+                        localStorage.removeItem(OLD_STORAGE_KEY);
+                    }
+                }
+            }
+            
+            // Get tickets array from localStorage
+            function getTickets() {
+                migrateOldTicket();
+                const data = localStorage.getItem(STORAGE_KEY);
+                if (!data) return [];
+                try {
+                    const parsed = JSON.parse(data);
+                    return Array.isArray(parsed) ? parsed : [];
+                } catch (e) {
+                    return [];
+                }
+            }
+            
+            // Save tickets array to localStorage
+            function saveTickets(tickets) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(tickets));
+            }
+            
+            // Remove ticket by ticketId
+            function removeTicket(ticketId) {
+                const tickets = getTickets();
+                const filtered = tickets.filter(t => String(t.ticketId) !== String(ticketId));
+                saveTickets(filtered);
+                return filtered;
+            }
+            
+            // Validate a single ticket via API
+            async function validateTicket(ticket) {
+                const apiUrl = '/api/public/tickets/' + ticket.ticketId;
+                const createdAt = ticket.createdAt || 0;
+                const isStale = (Date.now() - createdAt) > ONE_HOUR_MS;
+                
+                try {
+                    const response = await fetch(apiUrl);
+                    
+                    if (response.status === 404) {
+                        console.log('[SimpleQueue] Ticket not found (404):', ticket.ticketId);
+                        return { valid: false, remove: true, ticket };
+                    }
+                    
+                    if (!response.ok) {
+                        // Don't remove on temporary errors unless stale
+                        if (isStale) {
+                            return { valid: false, remove: true, ticket };
+                        }
+                        return { valid: null, remove: false, ticket }; // Unknown status
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // Check if ticket is still active
+                    if (!data.active) {
+                        if (isStale) {
+                            return { valid: false, remove: true, ticket };
+                        }
+                        // Keep completed tickets briefly (under 1 hour)
+                        return { valid: true, data, ticket, completed: true };
+                    }
+                    
+                    return { valid: true, data, ticket, completed: false };
+                } catch (error) {
+                    console.error('[SimpleQueue] Failed to validate ticket:', error);
+                    if (isStale) {
+                        return { valid: false, remove: true, ticket };
+                    }
+                    return { valid: null, remove: false, ticket };
+                }
+            }
+            
+            // Update ticket data in localStorage with fresh API data
+            function updateTicketData(ticketData) {
+                const tickets = getTickets();
+                const idx = tickets.findIndex(t => String(t.ticketId) === String(ticketData.ticketId));
+                if (idx >= 0) {
+                    tickets[idx] = {
+                        ...tickets[idx],
+                        code: ticketData.code,
+                        queueName: ticketData.queueName,
+                        createdAt: Date.now()
+                    };
+                    saveTickets(tickets);
+                }
+            }
+            
+            // Remove ticket with confirmation
+            window.removeTicketWithConfirm = function(ticketId, ticketCode) {
+                if (confirm('Are you sure you want to remove ticket #' + ticketCode + '?')) {
+                    const remaining = removeTicket(ticketId);
+                    renderTickets(remaining);
+                    console.log('[SimpleQueue] Removed ticket:', ticketId);
+                }
+            };
+            
+            // Render tickets list
+            function renderTickets(tickets) {
+                const container = document.getElementById('active-tickets-section');
+                const list = document.getElementById('tickets-list');
+                
+                if (!tickets || tickets.length === 0) {
+                    container.style.display = 'none';
+                    return;
+                }
+                
+                list.innerHTML = tickets.map(t => `
+                    <div style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border-radius: 12px; padding: 1.25rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                        <span style="font-size: 2rem;">🎫</span>
+                        <div style="flex: 1; min-width: 150px;">
+                            <div style="font-weight: 700; font-size: 1.25rem;">#${t.code}</div>
+                            <div style="opacity: 0.9; font-size: 0.95rem;">${t.queueName || 'Unknown Queue'}</div>
+                        </div>
+                        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                            <a href="/public/tickets/${t.ticketId}" 
+                               style="background: white; color: #667eea; padding: 0.6rem 1.25rem; border-radius: 8px; text-decoration: none; font-weight: 600; white-space: nowrap; transition: transform 0.2s;">
+                                View Status →
+                            </a>
+                            <button onclick="removeTicketWithConfirm('${t.ticketId}', '${t.code}')" 
+                                    style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 0.6rem 1.25rem; border-radius: 8px; cursor: pointer; font-weight: 500; white-space: nowrap; transition: all 0.2s;"
+                                    onmouseover="this.style.background='rgba(255,255,255,0.3)'"
+                                    onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+                                Remove
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+                
+                container.style.display = 'block';
+            }
+            
+            // Main initialization
+            async function init() {
+                const tickets = getTickets();
+                console.log('[SimpleQueue] Found tickets:', tickets);
+                
+                if (tickets.length === 0) {
+                    document.getElementById('active-tickets-section').style.display = 'none';
+                    return;
+                }
+                
+                // Validate all tickets in parallel
+                const results = await Promise.all(tickets.map(validateTicket));
+                
+                // Process results
+                const validTickets = [];
+                const ticketsToRemove = [];
+                
+                for (const result of results) {
+                    if (result.remove) {
+                        ticketsToRemove.push(result.ticket);
+                    } else if (result.valid) {
+                        // Update with fresh data if available
+                        if (result.data) {
+                            updateTicketData(result.data);
+                        }
+                        validTickets.push(result.ticket);
+                    } else {
+                        // Unknown status, keep it
+                        validTickets.push(result.ticket);
+                    }
+                }
+                
+                // Remove invalid tickets
+                if (ticketsToRemove.length > 0) {
+                    console.log('[SimpleQueue] Removing invalid tickets:', ticketsToRemove.map(t => t.ticketId));
+                    let updatedTickets = getTickets();
+                    for (const t of ticketsToRemove) {
+                        updatedTickets = updatedTickets.filter(ut => String(ut.ticketId) !== String(t.ticketId));
+                    }
+                    saveTickets(updatedTickets);
+                    renderTickets(updatedTickets);
+                } else {
+                    renderTickets(validTickets);
+                }
+            }
+            
+            // Run initialization
+            init();
+        })();
+    </script>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1 th:text="#{landing.heroTitle}">Streamline Your Queue Management</h1>
+            <p th:text="#{landing.heroSubtitle}">Create digital queues, manage customers efficiently, and notify them when it's their turn. Perfect for restaurants, clinics, salons, and any service business.</p>
+            <div class="hero-buttons">
+                <a href="/signup" class="btn btn-primary" th:text="#{landing.startFreeTrial}">Start Free Trial</a>
+                <a href="#how-it-works" class="btn btn-secondary" th:text="#{landing.learnMore}">Learn More</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section id="how-it-works" class="how-it-works">
+        <div class="section-container">
+            <h2 class="section-title" th:text="#{landing.howItWorks}">How It Works</h2>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3 th:text="#{landing.step1Title}">Create Your Queue</h3>
+                    <p th:text="#{landing.step1Desc}">Sign up and create a queue for your business in seconds. Customize settings to match your needs.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3 th:text="#{landing.step2Title}">Share QR Code</h3>
+                    <p th:text="#{landing.step2Desc}">Display the generated QR code at your entrance. Customers scan it to join the queue instantly.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3 th:text="#{landing.step3Title}">Manage Customers</h3>
+                    <p th:text="#{landing.step3Desc}">View waiting customers in real-time. Call the next person with a single click.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <h3 th:text="#{landing.step4Title}">Send Notifications</h3>
+                    <p th:text="#{landing.step4Desc}">Customers receive instant notifications when it's their turn. No more waiting around!</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="pricing" class="pricing">
+        <div class="section-container">
+            <h2 class="section-title" th:text="#{landing.chooseYourPlan}">Choose Your Plan</h2>
+            <div class="pricing-grid">
+                <!-- Free Plan -->
+                <div class="pricing-card">
+                    <h3 th:text="#{landing.starterPlan}">Starter</h3>
+                    <div class="price"><span th:text="#{landing.starterPrice}">$0</span><span th:text="#{landing.perMonth}">/month</span></div>
+                    <p th:text="#{landing.starterDesc}">Perfect for small businesses just getting started</p>
+                    <ul class="features">
+                        <li th:text="#{landing.starter.feature1}">1 active queue</li>
+                        <li th:text="#{landing.starter.feature2}">1 agent (queue operator)</li>
+                        <li th:text="#{landing.starter.feature3}">Up to 50 customers/day</li>
+                        <li th:text="#{landing.starter.feature4}">Basic notifications</li>
+                        <li th:text="#{landing.starter.feature5}">QR code generation</li>
+                        <li th:text="#{landing.starter.feature6}">Email support</li>
+                    </ul>
+                    <a href="/oauth2/authorization/keycloak" class="btn-pricing" th:text="#{landing.getStartedFree}">Get Started Free</a>
+                </div>
+
+                <!-- Pro Plan -->
+                <div class="pricing-card featured">
+                    <span class="badge" th:text="#{landing.mostPopular}">Most Popular</span>
+                    <h3 th:text="#{landing.proPlan}">Professional</h3>
+                    <div class="price"><span th:text="#{landing.proPrice}">$29</span><span th:text="#{landing.perMonth}">/month</span></div>
+                    <p th:text="#{landing.proDesc}">Ideal for growing businesses with multiple agents</p>
+                    <ul class="features">
+                        <li th:text="#{landing.pro.feature1}">Unlimited queues</li>
+                        <li th:text="#{landing.pro.feature2}">Unlimited agents (queue operators)</li>
+                        <li th:text="#{landing.pro.feature3}">Unlimited customers</li>
+                        <li th:text="#{landing.pro.feature4}">Priority notifications</li>
+                        <li th:text="#{landing.pro.feature5}">Advanced analytics</li>
+                        <li th:text="#{landing.pro.feature6}">Custom branding</li>
+                        <li th:text="#{landing.pro.feature7}">Priority support</li>
+                    </ul>
+                    <a href="/oauth2/authorization/keycloak" class="btn-pricing" th:text="#{landing.startFreeTrial}">Start Free Trial</a>
+                </div>
+
+                <!-- Enterprise Plan -->
+                <div class="pricing-card">
+                    <h3 th:text="#{landing.enterprisePlan}">Enterprise</h3>
+                    <div class="price"><span th:text="#{landing.enterprisePrice}">$99</span><span th:text="#{landing.perMonth}">/month</span></div>
+                    <p th:text="#{landing.enterpriseDesc}">For large organizations with advanced needs</p>
+                    <ul class="features">
+                        <li th:text="#{landing.enterprise.feature1}">Everything in Professional</li>
+                        <li th:text="#{landing.enterprise.feature2}">Multiple locations</li>
+                        <li th:text="#{landing.enterprise.feature3}">API access</li>
+                        <li th:text="#{landing.enterprise.feature4}">SSO integration</li>
+                        <li th:text="#{landing.enterprise.feature5}">Dedicated account manager</li>
+                        <li th:text="#{landing.enterprise.feature6}">24/7 phone support</li>
+                        <li th:text="#{landing.enterprise.feature7}">Custom integrations</li>
+                    </ul>
+                    <a href="/oauth2/authorization/keycloak" class="btn-pricing" th:text="#{landing.contactSales}">Contact Sales</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features-section">
+        <div class="section-container">
+            <h2 class="section-title" th:text="#{landing.whyChoose}">Why Choose Simple Queue?</h2>
+            <div class="features-grid">
+                <div class="feature-item">
+                    <h3 th:text="#{landing.feature1Title}">🚀 Real-time Updates</h3>
+                    <p th:text="#{landing.feature1Desc}">See customer status changes instantly. No page refreshes needed with our live dashboard.</p>
+                </div>
+                <div class="feature-item">
+                    <h3 th:text="#{landing.feature2Title}">📱 Mobile Friendly</h3>
+                    <p th:text="#{landing.feature2Desc}">Customers can join queues and receive notifications on any device without installing an app.</p>
+                </div>
+                <div class="feature-item">
+                    <h3 th:text="#{landing.feature3Title}">🔔 Smart Notifications</h3>
+                    <p th:text="#{landing.feature3Desc}">Automatic notifications via push, SMS, or email when it's a customer's turn.</p>
+                </div>
+                <div class="feature-item">
+                    <h3 th:text="#{landing.feature4Title}">📊 Analytics Dashboard</h3>
+                    <p th:text="#{landing.feature4Desc}">Track wait times, customer flow, and queue performance with detailed insights.</p>
+                </div>
+                <div class="feature-item">
+                    <h3 th:text="#{landing.feature5Title}">🔒 Secure & Private</h3>
+                    <p th:text="#{landing.feature5Desc}">Enterprise-grade security with OAuth2 authentication and data encryption.</p>
+                </div>
+                <div class="feature-item">
+                    <h3 th:text="#{landing.feature6Title}">🎨 Customizable</h3>
+                    <p th:text="#{landing.feature6Desc}">Brand your queue pages with your logo, colors, and custom messaging.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-links">
+                <a href="#how-it-works" th:text="#{nav.howItWorks}">How It Works</a>
+                <a href="#pricing" th:text="#{nav.pricing}">Pricing</a>
+                <a href="#features" th:text="#{nav.features}">Features</a>
+                <a href="/oauth2/authorization/keycloak" th:text="#{nav.getStarted}">Get Started</a>
+            </div>
+            <p th:text="#{landing.copyright}">© 2026 Simple Queue. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html>

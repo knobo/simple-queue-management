@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <title>Invalid QR Code - Simple Queue</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { 
+            font-family: sans-serif; 
+            padding: 20px; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            background-color: #f0f2f5; 
+        }
+        .card { 
+            background: white; 
+            padding: 40px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+            width: 100%; 
+            max-width: 400px; 
+            text-align: center; 
+        }
+        .icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: #dc2626;
+            margin-bottom: 10px;
+        }
+        p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        .suggestions {
+            background: #f9fafb;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: left;
+            margin-top: 20px;
+        }
+        .suggestions h3 {
+            margin-top: 0;
+            font-size: 14px;
+            color: #374151;
+        }
+        .suggestions ul {
+            margin: 0;
+            padding-left: 20px;
+            color: #6b7280;
+        }
+        .suggestions li {
+            margin: 8px 0;
+        }
+        .home-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #007bff;
+            text-decoration: none;
+        }
+        .home-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon">⚠️</div>
+        <h2 th:text="#{error.invalidQr}">Invalid QR Code</h2>
+        <p th:text="${error}">This QR code is no longer valid.</p>
+        
+        <div class="suggestions">
+            <h3 th:text="#{error.whatToDo}">What you can do:</h3>
+            <ul>
+                <li th:text="#{error.scanNew}">Ask staff for a new QR code to scan</li>
+                <li th:text="#{error.checkExpired}">The code may have expired - check if there's a new one displayed</li>
+                <li th:text="#{error.refreshPage}">If you just scanned, try refreshing this page</li>
+            </ul>
+        </div>
+        
+        <a href="/" class="home-link" th:text="#{error.goHome}">← Go to homepage</a>
+    </div>
+</body>
+</html>

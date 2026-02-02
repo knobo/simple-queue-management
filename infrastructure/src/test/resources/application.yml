@@ -1,0 +1,20 @@
+spring:
+  profiles:
+    active: test
+
+ntfy:
+  url: https://ntfy.example.com
+  username: test
+  password: test
+
+stripe:
+  secret-key: sk_test_dummy
+  publishable-key: pk_test_dummy
+  webhook-secret: whsec_dummy
+  prices:
+    starter: price_starter_test
+    pro: price_pro_test
+    enterprise: price_enterprise_test
+
+app:
+  base-url: http://localhost:8080

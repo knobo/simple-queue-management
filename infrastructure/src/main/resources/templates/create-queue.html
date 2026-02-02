@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <title th:text="#{create.title} + ' - Simple Queue'">Create Queue - Simple Queue</title>
+    <!-- Alpine.js for interactivity -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .language-selector a { text-decoration: none; font-size: 1.5em; margin-left: 5px; opacity: 0.6; }
+        .language-selector a.active { opacity: 1; }
+        .language-selector a:hover { opacity: 1; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; }
+        input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; }
+        .btn { padding: 10px 20px; background-color: #28a745; color: white; border: none; cursor: pointer; border-radius: 5px; }
+        .btn:disabled { background-color: #ccc; cursor: not-allowed; }
+        .error { color: #dc3545; margin-bottom: 10px; padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 5px; }
+        
+        .spinner {
+            display: inline-block;
+            width: 1em;
+            height: 1em;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            vertical-align: middle;
+            margin-left: 5px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="container" x-data="createQueueForm()" x-cloak>
+        <div class="header">
+            <h1 th:text="#{create.title}">Create a New Queue</h1>
+            <div th:replace="~{fragments/language-selector :: selector}"></div>
+            <script th:replace="~{fragments/language-selector :: script}"></script>
+        </div>
+        
+        <div x-show="errorMessage" class="error" x-text="errorMessage"></div>
+
+        <form @submit.prevent="submitForm">
+            <div class="form-group">
+                <label for="name" th:text="#{create.queueName}">Queue Name:</label>
+                <input type="text" id="name" x-model="name" required th:placeholder="#{create.placeholder}" :disabled="isLoading">
+            </div>
+            <button type="submit" class="btn" :disabled="isLoading"
+                    th:attr="data-creating=#{create.creating}, data-create=#{create.button}">
+                <span x-text="isLoading ? $el.parentElement.dataset.creating : $el.parentElement.dataset.create">Create Queue</span>
+                <span x-show="isLoading" class="spinner"></span>
+            </button>
+        </form>
+        <br>
+        <a href="/dashboard" th:text="#{create.backToDashboard}">Back to Dashboard</a>
+    </div>
+
+    <script th:inline="javascript">
+        const i18n = {
+            failed: /*[[#{create.failed}]]*/ 'Failed to create queue.',
+            networkError: /*[[#{create.networkError}]]*/ 'Network error. Please try again later.'
+        };
+
+        function createQueueForm() {
+            return {
+                name: '',
+                isLoading: false,
+                errorMessage: '',
+                
+                async submitForm() {
+                    if (!this.name.trim()) return;
+                    
+                    this.isLoading = true;
+                    this.errorMessage = '';
+                    
+                    try {
+                        const response = await fetch('/api/owner/queues', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ name: this.name })
+                        });
+
+                        if (response.ok) {
+                            window.location.href = '/dashboard';
+                        } else {
+                            // Try to parse error message if available
+                            let errorText = i18n.failed;
+                            try {
+                                const errorData = await response.json();
+                                if (errorData && errorData.message) {
+                                    errorText = errorData.message;
+                                }
+                            } catch (e) {
+                                // Ignore json parse error
+                            }
+                            this.errorMessage = errorText;
+                        }
+                    } catch (error) {
+                        this.errorMessage = i18n.networkError;
+                        console.error('Error creating queue:', error);
+                    } finally {
+                        this.isLoading = false;
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

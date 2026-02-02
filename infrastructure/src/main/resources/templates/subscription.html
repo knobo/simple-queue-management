@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <title th:text="#{subscription.title} + ' - Simple Queue'">Subscription - Simple Queue</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 20px; background-color: #f8f9fa; color: #333; }
+        .container { max-width: 1100px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .language-selector a { text-decoration: none; font-size: 1.5em; margin-left: 5px; opacity: 0.6; }
+        .language-selector a.active { opacity: 1; }
+        .language-selector a:hover { opacity: 1; }
+        .header-actions { display: flex; align-items: center; gap: 15px; }
+        .logout-btn { background: none; border: none; cursor: pointer; font-size: 1.2em; opacity: 0.6; padding: 5px; }
+        .logout-btn:hover { opacity: 1; }
+
+        .card { background: white; padding: 25px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #eaeaea; }
+        .card h3 { margin-top: 0; font-size: 1.3em; color: #222; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+
+        .btn { padding: 10px 20px; color: white; text-decoration: none; border-radius: 4px; border: none; cursor: pointer; font-size: 0.95em; display: inline-block; transition: opacity 0.2s; }
+        .btn:hover { opacity: 0.9; }
+        .btn-primary { background-color: #007bff; }
+        .btn-success { background-color: #28a745; }
+        .btn-secondary { background-color: #6c757d; }
+        .btn-outline { background: white; border: 2px solid #007bff; color: #007bff; }
+        .btn-outline:hover { background: #007bff; color: white; }
+
+        /* Current plan section */
+        .current-plan { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .plan-badge { display: inline-block; padding: 8px 16px; border-radius: 20px; font-weight: bold; text-transform: uppercase; }
+        .plan-free { background: #e9ecef; color: #495057; }
+        .plan-starter { background: #d4edda; color: #155724; }
+        .plan-pro { background: #cce5ff; color: #004085; }
+        .plan-enterprise { background: #f5c6cb; color: #721c24; }
+
+        /* Usage bars */
+        .usage-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 20px; }
+        .usage-item { }
+        .usage-label { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.9em; color: #555; }
+        .usage-bar { height: 12px; background: #e9ecef; border-radius: 6px; overflow: hidden; }
+        .usage-fill { height: 100%; background: linear-gradient(90deg, #28a745, #20c997); border-radius: 6px; transition: width 0.3s ease; }
+        .usage-fill.warning { background: linear-gradient(90deg, #ffc107, #fd7e14); }
+        .usage-fill.danger { background: linear-gradient(90deg, #dc3545, #c82333); }
+
+        /* Feature badges */
+        .feature-badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 0.8em; margin: 2px; }
+        .feature-enabled { background: #d4edda; color: #155724; }
+        .feature-disabled { background: #f8d7da; color: #721c24; }
+
+        /* Plans grid */
+        .plans-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-top: 20px; }
+        .plan-card { background: white; border: 2px solid #eaeaea; border-radius: 12px; padding: 25px; text-align: center; transition: transform 0.2s, box-shadow 0.2s; position: relative; }
+        .plan-card:hover { transform: translateY(-4px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+        .plan-card.current { border-color: #28a745; }
+        .plan-card.popular { border-color: #007bff; }
+        .plan-card .popular-badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #007bff; color: white; padding: 4px 16px; border-radius: 12px; font-size: 0.75em; font-weight: bold; }
+        .plan-card h4 { margin: 0 0 10px 0; font-size: 1.4em; }
+        .plan-card .price { font-size: 2.5em; font-weight: bold; color: #222; }
+        .plan-card .price span { font-size: 0.4em; color: #666; font-weight: normal; }
+        .plan-card .description { color: #666; font-size: 0.9em; margin: 15px 0; }
+        .plan-card ul { text-align: left; padding-left: 0; list-style: none; margin: 20px 0; }
+        .plan-card li { padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 0.9em; }
+        .plan-card li:last-child { border-bottom: none; }
+        .plan-card li::before { content: "✓ "; color: #28a745; font-weight: bold; }
+
+        /* Billing section */
+        .billing-info { color: #666; margin-bottom: 15px; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .current-plan { flex-direction: column; align-items: flex-start; }
+            .plans-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Modal */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-overlay.show { display: flex; }
+        .modal { background: white; padding: 30px; border-radius: 12px; max-width: 400px; text-align: center; }
+        .modal h4 { margin-top: 0; }
+        .modal p { color: #666; }
+    </style>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+    <script th:inline="javascript">
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('subscriptionManager', () => ({
+                showModal: false,
+                modalTitle: '',
+                modalMessage: '',
+
+                async upgrade(tier) {
+                    try {
+                        const response = await fetch('/api/subscription/checkout', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ tier: tier })
+                        });
+                        const data = await response.json();
+                        if (data.success && data.url) {
+                            // Redirect to Stripe Checkout
+                            window.location.href = data.url;
+                        } else {
+                            this.modalTitle = /*[[#{common.error}]]*/ 'Error';
+                            this.modalMessage = data.message || /*[[#{subscription.upgradeFailed}]]*/ 'Failed to start checkout';
+                            this.showModal = true;
+                        }
+                    } catch (error) {
+                        this.modalTitle = /*[[#{common.error}]]*/ 'Error';
+                        this.modalMessage = /*[[#{dashboard.networkError}]]*/ 'Network error occurred.';
+                        this.showModal = true;
+                    }
+                },
+
+                async openBillingPortal() {
+                    this.modalTitle = /*[[#{subscription.billingPortalTitle}]]*/ 'Billing Portal';
+                    this.modalMessage = /*[[#{subscription.billingComingSoon}]]*/ 'Billing portal integration coming soon!';
+                    this.showModal = true;
+                },
+
+                closeModal() {
+                    this.showModal = false;
+                }
+            }));
+        });
+    </script>
+</head>
+<body>
+<div class="container" x-data="subscriptionManager()">
+    <div class="header">
+        <h1 th:text="#{subscription.title}">Subscription</h1>
+        <div class="header-actions">
+            <div th:replace="~{fragments/language-selector :: selector}"></div>
+            <script th:replace="~{fragments/language-selector :: script}"></script>
+            <form th:action="@{/logout}" method="post" style="margin: 0;">
+                <button type="submit" class="logout-btn" th:title="#{admin.logout}">🚪</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Current Plan Section -->
+    <div class="card">
+        <h3 th:text="#{subscription.currentPlan}">Current Plan</h3>
+        <div class="current-plan">
+            <div>
+                <span class="plan-badge"
+                      th:classappend="${subscription.tier.name() == 'FREE' ? 'plan-free' :
+                                        subscription.tier.name() == 'STARTER' ? 'plan-starter' :
+                                        subscription.tier.name() == 'PRO' ? 'plan-pro' : 'plan-enterprise'}"
+                      th:text="${subscription.tier}">FREE</span>
+                <p style="margin: 10px 0 0 0; color: #666;" th:if="${subscription.isActive}">
+                    <span th:text="#{subscription.status}">Status</span>: 
+                    <strong style="color: #28a745;" th:text="#{subscription.active}">Active</strong>
+                </p>
+            </div>
+            <div>
+                <span class="feature-badge" th:classappend="${limits.canUseEmailNotifications ? 'feature-enabled' : 'feature-disabled'}">
+                    📧 <span th:text="#{subscription.emailNotifications}">Email Notifications</span>
+                </span>
+                <span class="feature-badge" th:classappend="${limits.canUseCustomBranding ? 'feature-enabled' : 'feature-disabled'}">
+                    🎨 <span th:text="#{subscription.customBranding}">Custom Branding</span>
+                </span>
+            </div>
+        </div>
+
+        <!-- Usage Section -->
+        <div class="usage-grid">
+            <div class="usage-item">
+                <div class="usage-label">
+                    <span th:text="#{subscription.queues}">Queues</span>
+                    <span th:text="${limits.currentQueues} + ' / ' + (${limits.maxQueues} == 2147483647 ? '∞' : ${limits.maxQueues})">1 / 1</span>
+                </div>
+                <div class="usage-bar">
+                    <div class="usage-fill"
+                         th:classappend="${limits.maxQueues != 2147483647 and (limits.currentQueues * 100 / limits.maxQueues) >= 90 ? 'danger' :
+                                          limits.maxQueues != 2147483647 and (limits.currentQueues * 100 / limits.maxQueues) >= 70 ? 'warning' : ''}"
+                         th:style="${limits.maxQueues == 2147483647 ? 'width: 10%' : 'width: ' + (limits.currentQueues * 100 / limits.maxQueues) + '%'}">
+                    </div>
+                </div>
+            </div>
+            <div class="usage-item">
+                <div class="usage-label">
+                    <span th:text="#{subscription.operatorsPerQueue}">Operators per Queue</span>
+                    <span th:text="'Max: ' + (${limits.maxOperatorsPerQueue} == 2147483647 ? '∞' : ${limits.maxOperatorsPerQueue})">Max: 0</span>
+                </div>
+                <div class="usage-bar">
+                    <div class="usage-fill" style="width: 0%;"></div>
+                </div>
+            </div>
+            <div class="usage-item">
+                <div class="usage-label">
+                    <span th:text="#{subscription.ticketsPerDay}">Tickets per Day</span>
+                    <span th:text="'Max: ' + (${limits.maxTicketsPerDay} == 2147483647 ? '∞' : ${limits.maxTicketsPerDay})">Max: 50</span>
+                </div>
+                <div class="usage-bar">
+                    <div class="usage-fill" style="width: 0%;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upgrade Section -->
+    <div class="card">
+        <h3 th:text="#{subscription.upgradePlan}">Upgrade Your Plan</h3>
+        <p style="color: #666; margin-bottom: 20px;" th:text="#{subscription.upgradeDescription}">Choose the plan that best fits your business needs.</p>
+
+        <div class="plans-grid">
+            <!-- FREE Plan -->
+            <div class="plan-card" th:classappend="${subscription.tier.name() == 'FREE' ? 'current' : ''}">
+                <h4 th:text="#{subscription.plan.free}">Free</h4>
+                <div class="price">$0<span th:text="#{subscription.perMonth}">/month</span></div>
+                <p class="description" th:text="#{subscription.plan.free.desc}">Perfect for trying out</p>
+                <ul>
+                    <li th:text="#{subscription.plan.free.feature1}">1 queue</li>
+                    <li th:text="#{subscription.plan.free.feature2}">No operators</li>
+                    <li th:text="#{subscription.plan.free.feature3}">50 tickets/day</li>
+                    <li th:text="#{subscription.plan.free.feature4}">Basic features</li>
+                </ul>
+                <button class="btn btn-secondary" disabled th:if="${subscription.tier.name() == 'FREE'}" th:text="#{subscription.currentPlanBtn}">Current Plan</button>
+                <button class="btn btn-outline" th:unless="${subscription.tier.name() == 'FREE'}" th:text="#{subscription.downgrade}">Downgrade</button>
+            </div>
+
+            <!-- STARTER Plan -->
+            <div class="plan-card" th:classappend="${subscription.tier.name() == 'STARTER' ? 'current' : ''}">
+                <h4 th:text="#{subscription.plan.starter}">Starter</h4>
+                <div class="price">$9<span th:text="#{subscription.perMonth}">/month</span></div>
+                <p class="description" th:text="#{subscription.plan.starter.desc}">For small businesses</p>
+                <ul>
+                    <li th:text="#{subscription.plan.starter.feature1}">3 queues</li>
+                    <li th:text="#{subscription.plan.starter.feature2}">2 operators per queue</li>
+                    <li th:text="#{subscription.plan.starter.feature3}">200 tickets/day</li>
+                    <li th:text="#{subscription.plan.starter.feature4}">Email notifications</li>
+                </ul>
+                <button class="btn btn-secondary" disabled th:if="${subscription.tier.name() == 'STARTER'}" th:text="#{subscription.currentPlanBtn}">Current Plan</button>
+                <button class="btn btn-primary" th:unless="${subscription.tier.name() == 'STARTER'}" @click="upgrade('STARTER')" th:text="#{subscription.upgrade}">Upgrade</button>
+            </div>
+
+            <!-- PRO Plan -->
+            <div class="plan-card popular" th:classappend="${subscription.tier.name() == 'PRO' ? 'current' : ''}">
+                <span class="popular-badge" th:text="#{subscription.mostPopular}">Most Popular</span>
+                <h4 th:text="#{subscription.plan.pro}">Pro</h4>
+                <div class="price">$29<span th:text="#{subscription.perMonth}">/month</span></div>
+                <p class="description" th:text="#{subscription.plan.pro.desc}">For growing businesses</p>
+                <ul>
+                    <li th:text="#{subscription.plan.pro.feature1}">10 queues</li>
+                    <li th:text="#{subscription.plan.pro.feature2}">10 operators per queue</li>
+                    <li th:text="#{subscription.plan.pro.feature3}">Unlimited tickets</li>
+                    <li th:text="#{subscription.plan.pro.feature4}">Custom branding</li>
+                </ul>
+                <button class="btn btn-secondary" disabled th:if="${subscription.tier.name() == 'PRO'}" th:text="#{subscription.currentPlanBtn}">Current Plan</button>
+                <button class="btn btn-primary" th:unless="${subscription.tier.name() == 'PRO'}" @click="upgrade('PRO')" th:text="#{subscription.upgrade}">Upgrade</button>
+            </div>
+
+            <!-- ENTERPRISE Plan -->
+            <div class="plan-card" th:classappend="${subscription.tier.name() == 'ENTERPRISE' ? 'current' : ''}">
+                <h4 th:text="#{subscription.plan.enterprise}">Enterprise</h4>
+                <div class="price">$99<span th:text="#{subscription.perMonth}">/month</span></div>
+                <p class="description" th:text="#{subscription.plan.enterprise.desc}">For large organizations</p>
+                <ul>
+                    <li th:text="#{subscription.plan.enterprise.feature1}">Unlimited queues</li>
+                    <li th:text="#{subscription.plan.enterprise.feature2}">Unlimited operators</li>
+                    <li th:text="#{subscription.plan.enterprise.feature3}">Priority support</li>
+                    <li th:text="#{subscription.plan.enterprise.feature4}">Custom integrations</li>
+                </ul>
+                <button class="btn btn-secondary" disabled th:if="${subscription.tier.name() == 'ENTERPRISE'}" th:text="#{subscription.currentPlanBtn}">Current Plan</button>
+                <button class="btn btn-primary" th:unless="${subscription.tier.name() == 'ENTERPRISE'}" @click="upgrade('ENTERPRISE')" th:text="#{subscription.upgrade}">Upgrade</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Billing Section -->
+    <div class="card">
+        <h3 th:text="#{subscription.billing}">Billing</h3>
+        <p class="billing-info" th:text="#{subscription.billingDescription}">Manage your payment methods and invoices.</p>
+        <button class="btn btn-outline" @click="openBillingPortal()" th:text="#{subscription.openBillingPortal}">Open Billing Portal</button>
+    </div>
+
+    <!-- Back to Dashboard -->
+    <div style="margin-top: 20px;">
+        <a href="/dashboard" class="btn btn-secondary" th:text="#{admin.backToDashboard}">Back to Dashboard</a>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" :class="{ 'show': showModal }" @click.self="closeModal()">
+        <div class="modal">
+            <h4 x-text="modalTitle">Title</h4>
+            <p x-text="modalMessage">Message</p>
+            <button class="btn btn-primary" @click="closeModal()" th:text="#{common.ok}">OK</button>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug - localStorage Status</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+            color: #333;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .status.ok {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .status.stale {
+            background: #ffeeba;
+            color: #856404;
+        }
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .label {
+            font-weight: bold;
+            color: #7f8c8d;
+            display: inline-block;
+            min-width: 140px;
+        }
+        .value {
+            color: #2c3e50;
+        }
+        .row {
+            margin: 10px 0;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .row:last-child {
+            border-bottom: none;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        .btn-danger {
+            background: #e74c3c;
+        }
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        .btn-secondary {
+            background: #95a5a6;
+        }
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+        .btn-success {
+            background: #27ae60;
+        }
+        .btn-success:hover {
+            background: #1e8449;
+        }
+        .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        #apiResponse {
+            margin-top: 20px;
+        }
+        .hidden {
+            display: none;
+        }
+        .time-info {
+            font-size: 13px;
+            color: #7f8c8d;
+        }
+        .mono {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        }
+        /* Console log styles */
+        #consoleOutput {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 6px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+        .log-entry {
+            padding: 4px 8px;
+            margin: 2px 0;
+            border-radius: 3px;
+            word-break: break-word;
+        }
+        .log-entry.log {
+            color: #9e9e9e;
+            background: rgba(158, 158, 158, 0.1);
+        }
+        .log-entry.warn {
+            color: #ffb74d;
+            background: rgba(255, 183, 77, 0.15);
+        }
+        .log-entry.error {
+            color: #ef5350;
+            background: rgba(239, 83, 80, 0.15);
+        }
+        .log-entry.info {
+            color: #64b5f6;
+            background: rgba(100, 181, 246, 0.1);
+        }
+        .log-timestamp {
+            color: #666;
+            font-size: 11px;
+            margin-right: 8px;
+        }
+        .log-type {
+            font-weight: bold;
+            margin-right: 8px;
+            text-transform: uppercase;
+            font-size: 10px;
+        }
+        .console-empty {
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Debug - localStorage Status</h1>
+    
+    <div class="card">
+        <h2>📦 localStorage Key: <code>simplequeue_ticket</code></h2>
+        
+        <div id="storageStatus">
+            <div class="row">
+                <span class="label">Status:</span>
+                <span id="status" class="status">Laster...</span>
+            </div>
+            <div class="row">
+                <span class="label">Rå verdi:</span>
+                <span id="rawValue" class="value mono">-</span>
+            </div>
+        </div>
+        
+        <div id="ticketDetails" class="hidden">
+            <h3>🎫 Ticket Data</h3>
+            <div class="row">
+                <span class="label">Ticket ID:</span>
+                <span id="ticketId" class="value mono">-</span>
+            </div>
+            <div class="row">
+                <span class="label">Queue ID:</span>
+                <span id="queueId" class="value mono">-</span>
+            </div>
+            <div class="row">
+                <span class="label">Lagret:</span>
+                <span id="savedAt" class="value">-</span>
+                <span id="savedAtRelative" class="time-info"></span>
+            </div>
+            <div class="row">
+                <span class="label">Er utdatert?</span>
+                <span id="isStale" class="value">-</span>
+                <span id="staleInfo" class="time-info"></span>
+            </div>
+            
+            <h4>Parsed JSON:</h4>
+            <pre id="parsedJson">-</pre>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2>🌐 API Status Check</h2>
+        <p>Hent ticket-status fra API for å verifisere at ticket fortsatt eksisterer på serveren.</p>
+        
+        <div class="actions">
+            <button id="checkApiBtn" onclick="checkTicketApi()">
+                📡 Hent ticket fra API
+            </button>
+            <button id="clearStorageBtn" class="btn-danger" onclick="clearStorage()">
+                🗑️ Slett localStorage
+            </button>
+            <button class="btn-secondary" onclick="refreshPage()">
+                🔄 Oppdater side
+            </button>
+        </div>
+        
+        <div id="apiResponse" class="hidden">
+            <h4>API Response:</h4>
+            <div class="row">
+                <span class="label">HTTP Status:</span>
+                <span id="httpStatus" class="value">-</span>
+            </div>
+            <pre id="apiJson">-</pre>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2>🖥️ Console Output</h2>
+        <p>Alle console.log, console.warn og console.error meldinger fanges her.</p>
+        
+        <div class="actions">
+            <button class="btn-success" onclick="triggerLandingPageCheck()">
+                🔍 Trigger Landing Page Check
+            </button>
+            <button class="btn-secondary" onclick="clearConsole()">
+                🧹 Tøm console
+            </button>
+        </div>
+        
+        <div id="consoleOutput" style="margin-top: 15px;">
+            <div class="console-empty">Ingen console output ennå. Trykk "Trigger Landing Page Check" for å starte.</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>📋 Alle localStorage Keys</h2>
+        <pre id="allKeys">Laster...</pre>
+    </div>
+
+    <script>
+        // ========================================
+        // Console capture - må være FØRST!
+        // ========================================
+        const consoleLogs = [];
+        const originalConsole = {
+            log: console.log.bind(console),
+            warn: console.warn.bind(console),
+            error: console.error.bind(console),
+            info: console.info.bind(console)
+        };
+        
+        function formatTimestamp() {
+            const now = new Date();
+            return now.toLocaleTimeString('no-NO', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                fractionalSecondDigits: 3
+            });
+        }
+        
+        function formatArg(arg) {
+            if (arg === null) return 'null';
+            if (arg === undefined) return 'undefined';
+            if (typeof arg === 'object') {
+                try {
+                    return JSON.stringify(arg, null, 2);
+                } catch (e) {
+                    return String(arg);
+                }
+            }
+            return String(arg);
+        }
+        
+        function captureConsole(type, args) {
+            const timestamp = formatTimestamp();
+            const message = Array.from(args).map(formatArg).join(' ');
+            
+            consoleLogs.push({ type, timestamp, message });
+            renderConsole();
+            
+            // Også send til original console
+            originalConsole[type](...args);
+        }
+        
+        function renderConsole() {
+            const output = document.getElementById('consoleOutput');
+            if (!output) return;
+            
+            if (consoleLogs.length === 0) {
+                output.innerHTML = '<div class="console-empty">Ingen console output ennå. Trykk "Trigger Landing Page Check" for å starte.</div>';
+                return;
+            }
+            
+            output.innerHTML = consoleLogs.map(entry => {
+                const escapedMessage = entry.message
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/\n/g, '<br>');
+                
+                return `<div class="log-entry ${entry.type}">` +
+                    `<span class="log-timestamp">${entry.timestamp}</span>` +
+                    `<span class="log-type">[${entry.type}]</span>` +
+                    `<span class="log-message">${escapedMessage}</span>` +
+                    `</div>`;
+            }).join('');
+            
+            // Auto-scroll til bunnen
+            output.scrollTop = output.scrollHeight;
+        }
+        
+        // Override console methods
+        console.log = function(...args) { captureConsole('log', args); };
+        console.warn = function(...args) { captureConsole('warn', args); };
+        console.error = function(...args) { captureConsole('error', args); };
+        console.info = function(...args) { captureConsole('info', args); };
+        
+        function clearConsole() {
+            consoleLogs.length = 0;
+            renderConsole();
+        }
+        
+        // ========================================
+        // Landing page check - kopiert fra landing.html
+        // ========================================
+        function triggerLandingPageCheck() {
+            console.log('========================================');
+            console.log('[Debug] Starting landing page check...');
+            console.log('========================================');
+            
+            const STORAGE_KEY = 'simplequeue_ticket';
+            const storedTicket = localStorage.getItem(STORAGE_KEY);
+            
+            console.log('[SimpleQueue] Checking localStorage for ticket:', storedTicket);
+            
+            if (!storedTicket) {
+                console.log('[SimpleQueue] No ticket in localStorage');
+                console.warn('[Debug] Check complete - no ticket found');
+                return;
+            }
+            
+            try {
+                const ticketData = JSON.parse(storedTicket);
+                console.log('[SimpleQueue] Parsed ticket data:', ticketData);
+                
+                // Validate ticket is still active via API
+                const apiUrl = '/api/public/tickets/' + ticketData.ticketId;
+                const savedAt = ticketData.savedAt || 0;
+                const ONE_HOUR_MS = 60 * 60 * 1000;
+                const isStale = (Date.now() - savedAt) > ONE_HOUR_MS;
+                
+                console.log('[SimpleQueue] savedAt:', savedAt, 'isStale:', isStale);
+                console.log('[SimpleQueue] Fetching:', apiUrl);
+                
+                fetch(apiUrl)
+                    .then(response => {
+                        console.log('[SimpleQueue] API response status:', response.status);
+                        
+                        if (response.status === 404) {
+                            console.log('[SimpleQueue] Ticket not found (404), removing from localStorage');
+                            localStorage.removeItem(STORAGE_KEY);
+                            loadStorageStatus();
+                            loadAllKeys();
+                            return null;
+                        }
+                        
+                        if (!response.ok) {
+                            if (isStale) {
+                                console.log('[SimpleQueue] API error and ticket is stale, removing from localStorage');
+                                localStorage.removeItem(STORAGE_KEY);
+                                loadStorageStatus();
+                                loadAllKeys();
+                            } else {
+                                console.log('[SimpleQueue] API error (status ' + response.status + '), keeping ticket (not stale)');
+                            }
+                            return null;
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('[SimpleQueue] API data:', data);
+                        if (!data) {
+                            console.warn('[Debug] Check complete - no valid data returned');
+                            return;
+                        }
+                        
+                        // Check if ticket is still active
+                        if (!data.active) {
+                            if (isStale) {
+                                console.log('[SimpleQueue] Ticket not active and stale, removing from localStorage');
+                                localStorage.removeItem(STORAGE_KEY);
+                                loadStorageStatus();
+                                loadAllKeys();
+                            } else {
+                                console.log('[SimpleQueue] Ticket not active but recent, keeping for now');
+                            }
+                            console.warn('[Debug] Check complete - ticket not active');
+                            return;
+                        }
+                        
+                        // Update stored data with fresh info
+                        const updatedData = {
+                            ticketId: data.ticketId,
+                            code: data.code,
+                            queueName: data.queueName,
+                            savedAt: Date.now()
+                        };
+                        console.log('[SimpleQueue] Updating localStorage with:', updatedData);
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedData));
+                        
+                        console.log('[SimpleQueue] Would show banner for active ticket');
+                        console.log('[Debug] Check complete - ticket is ACTIVE!');
+                        
+                        // Refresh the debug display
+                        loadStorageStatus();
+                        loadAllKeys();
+                    })
+                    .catch(error => {
+                        console.error('[SimpleQueue] Failed to validate stored ticket:', error);
+                        if (isStale) {
+                            console.log('[SimpleQueue] Network error and ticket is stale, removing from localStorage');
+                            localStorage.removeItem(STORAGE_KEY);
+                            loadStorageStatus();
+                            loadAllKeys();
+                        } else {
+                            console.log('[SimpleQueue] Network error, keeping ticket (not stale)');
+                        }
+                        console.warn('[Debug] Check complete - with errors');
+                    });
+            } catch (e) {
+                console.error('[SimpleQueue] Invalid JSON in localStorage:', e);
+                localStorage.removeItem(STORAGE_KEY);
+                loadStorageStatus();
+                loadAllKeys();
+            }
+        }
+        
+        // ========================================
+        // Original debug.html functionality
+        // ========================================
+        const STORAGE_KEY = 'simplequeue_ticket';
+        const STALE_THRESHOLD_MS = 60 * 60 * 1000; // 1 time
+        
+        function formatDate(isoString) {
+            if (!isoString) return '-';
+            try {
+                const date = new Date(isoString);
+                return date.toLocaleString('no-NO', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+            } catch (e) {
+                return isoString;
+            }
+        }
+        
+        function getRelativeTime(isoString) {
+            if (!isoString) return '';
+            try {
+                const date = new Date(isoString);
+                const now = new Date();
+                const diffMs = now - date;
+                const diffMins = Math.floor(diffMs / 60000);
+                const diffHours = Math.floor(diffMs / 3600000);
+                const diffDays = Math.floor(diffMs / 86400000);
+                
+                if (diffMins < 1) return '(akkurat nå)';
+                if (diffMins < 60) return `(${diffMins} min siden)`;
+                if (diffHours < 24) return `(${diffHours} timer siden)`;
+                return `(${diffDays} dager siden)`;
+            } catch (e) {
+                return '';
+            }
+        }
+        
+        function isStale(isoString) {
+            if (!isoString) return { stale: true, reason: 'Ingen savedAt' };
+            try {
+                const date = new Date(isoString);
+                const now = new Date();
+                const diffMs = now - date;
+                const diffHours = diffMs / 3600000;
+                
+                if (diffMs > STALE_THRESHOLD_MS) {
+                    return { 
+                        stale: true, 
+                        reason: `${diffHours.toFixed(1)} timer gammel (grense: 1 time)` 
+                    };
+                }
+                return { 
+                    stale: false, 
+                    reason: `${(diffMs / 60000).toFixed(0)} min gammel (OK)` 
+                };
+            } catch (e) {
+                return { stale: true, reason: 'Ugyldig dato' };
+            }
+        }
+        
+        function loadStorageStatus() {
+            const statusEl = document.getElementById('status');
+            const rawValueEl = document.getElementById('rawValue');
+            const ticketDetailsEl = document.getElementById('ticketDetails');
+            
+            const raw = localStorage.getItem(STORAGE_KEY);
+            
+            if (!raw) {
+                statusEl.textContent = 'Ingen data';
+                statusEl.className = 'status warning';
+                rawValueEl.textContent = '(null/undefined)';
+                ticketDetailsEl.classList.add('hidden');
+                document.getElementById('checkApiBtn').disabled = true;
+                return;
+            }
+            
+            rawValueEl.textContent = raw.length > 100 
+                ? raw.substring(0, 100) + '...' 
+                : raw;
+            
+            try {
+                const parsed = JSON.parse(raw);
+                
+                statusEl.textContent = 'Data funnet';
+                statusEl.className = 'status ok';
+                ticketDetailsEl.classList.remove('hidden');
+                
+                // Populate fields
+                document.getElementById('ticketId').textContent = parsed.ticketId || '-';
+                document.getElementById('queueId').textContent = parsed.queueId || '-';
+                document.getElementById('savedAt').textContent = formatDate(parsed.savedAt);
+                document.getElementById('savedAtRelative').textContent = getRelativeTime(parsed.savedAt);
+                
+                // Stale check
+                const staleResult = isStale(parsed.savedAt);
+                const isStaleEl = document.getElementById('isStale');
+                const staleInfoEl = document.getElementById('staleInfo');
+                
+                if (staleResult.stale) {
+                    isStaleEl.textContent = '⚠️ JA';
+                    isStaleEl.className = 'value';
+                    statusEl.textContent = 'Utdatert data';
+                    statusEl.className = 'status stale';
+                } else {
+                    isStaleEl.textContent = '✅ NEI';
+                    isStaleEl.className = 'value';
+                }
+                staleInfoEl.textContent = `(${staleResult.reason})`;
+                
+                // Parsed JSON
+                document.getElementById('parsedJson').textContent = 
+                    JSON.stringify(parsed, null, 2);
+                
+                document.getElementById('checkApiBtn').disabled = !parsed.ticketId;
+                
+            } catch (e) {
+                statusEl.textContent = 'Ugyldig JSON';
+                statusEl.className = 'status error';
+                rawValueEl.textContent = raw;
+                ticketDetailsEl.classList.add('hidden');
+                document.getElementById('checkApiBtn').disabled = true;
+            }
+        }
+        
+        function loadAllKeys() {
+            const keys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                const value = localStorage.getItem(key);
+                keys.push({
+                    key: key,
+                    length: value ? value.length : 0,
+                    preview: value ? value.substring(0, 50) : '(empty)'
+                });
+            }
+            
+            if (keys.length === 0) {
+                document.getElementById('allKeys').textContent = '(ingen keys i localStorage)';
+            } else {
+                document.getElementById('allKeys').textContent = keys.map(k => 
+                    `${k.key} (${k.length} bytes): ${k.preview}${k.preview.length >= 50 ? '...' : ''}`
+                ).join('\n');
+            }
+        }
+        
+        async function checkTicketApi() {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) {
+                alert('Ingen ticket i localStorage');
+                return;
+            }
+            
+            let ticketId;
+            try {
+                const parsed = JSON.parse(raw);
+                ticketId = parsed.ticketId;
+            } catch (e) {
+                alert('Kunne ikke parse localStorage data');
+                return;
+            }
+            
+            if (!ticketId) {
+                alert('Ingen ticketId i data');
+                return;
+            }
+            
+            const btn = document.getElementById('checkApiBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Henter...';
+            
+            const apiResponseEl = document.getElementById('apiResponse');
+            apiResponseEl.classList.remove('hidden');
+            
+            try {
+                const response = await fetch(`/api/public/tickets/${ticketId}`);
+                const httpStatusEl = document.getElementById('httpStatus');
+                const apiJsonEl = document.getElementById('apiJson');
+                
+                httpStatusEl.textContent = `${response.status} ${response.statusText}`;
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    apiJsonEl.textContent = JSON.stringify(data, null, 2);
+                    httpStatusEl.className = 'value';
+                } else {
+                    let errorText = await response.text();
+                    try {
+                        const errorJson = JSON.parse(errorText);
+                        apiJsonEl.textContent = JSON.stringify(errorJson, null, 2);
+                    } catch {
+                        apiJsonEl.textContent = errorText || '(no response body)';
+                    }
+                    httpStatusEl.className = 'value';
+                    httpStatusEl.style.color = '#e74c3c';
+                }
+            } catch (e) {
+                document.getElementById('httpStatus').textContent = 'Feil';
+                document.getElementById('apiJson').textContent = e.message;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '📡 Hent ticket fra API';
+            }
+        }
+        
+        function clearStorage() {
+            if (confirm('Er du sikker på at du vil slette localStorage key: ' + STORAGE_KEY + '?')) {
+                localStorage.removeItem(STORAGE_KEY);
+                loadStorageStatus();
+                loadAllKeys();
+                document.getElementById('apiResponse').classList.add('hidden');
+            }
+        }
+        
+        function refreshPage() {
+            location.reload();
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStorageStatus();
+            loadAllKeys();
+        });
+    </script>
+</body>
+</html>

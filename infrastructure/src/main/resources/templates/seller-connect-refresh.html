@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <title th:text="#{seller.connect.refresh.title} + ' - Simple Queue'">Setup Interrupted - Simple Queue</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            padding: 20px; 
+            background-color: #f8f9fa; 
+            color: #333; 
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container { 
+            max-width: 500px; 
+            width: 100%;
+            text-align: center;
+        }
+        .card { 
+            background: white; 
+            padding: 40px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08); 
+            border: 1px solid #eaeaea; 
+        }
+        .warning-icon { 
+            font-size: 4em; 
+            margin-bottom: 20px;
+        }
+        h1 { 
+            margin: 0 0 15px; 
+            color: #856404; 
+            font-size: 1.8em;
+        }
+        p { 
+            color: #666; 
+            line-height: 1.6; 
+            margin-bottom: 25px;
+        }
+        .btn { 
+            padding: 12px 30px; 
+            color: white; 
+            text-decoration: none; 
+            border-radius: 6px; 
+            border: none; 
+            cursor: pointer; 
+            font-size: 1em; 
+            display: inline-block; 
+            transition: all 0.2s;
+            font-weight: 500;
+            margin: 5px;
+        }
+        .btn:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .btn-stripe { 
+            background: linear-gradient(135deg, #635bff 0%, #7c4dff 100%); 
+        }
+        .btn-stripe:hover { 
+            background: linear-gradient(135deg, #5851db 0%, #6a3fff 100%); 
+        }
+        .btn-secondary { 
+            background-color: #6c757d; 
+        }
+
+        .reasons {
+            background: #fff3cd;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: left;
+            border: 1px solid #ffeeba;
+        }
+        .reasons h4 {
+            margin: 0 0 10px;
+            color: #856404;
+            font-size: 0.95em;
+        }
+        .reasons ul {
+            margin: 0;
+            padding-left: 20px;
+            color: #856404;
+            font-size: 0.9em;
+        }
+        .reasons li {
+            margin-bottom: 5px;
+        }
+
+        .actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .language-selector { 
+            position: absolute; 
+            top: 20px; 
+            right: 20px;
+        }
+        .language-selector a { 
+            text-decoration: none; 
+            font-size: 1.5em; 
+            margin-left: 5px; 
+            opacity: 0.6; 
+        }
+        .language-selector a.active { opacity: 1; }
+        .language-selector a:hover { opacity: 1; }
+    </style>
+    <script th:inline="javascript">
+        async function retryOnboarding() {
+            const btn = document.getElementById('retry-btn');
+            btn.disabled = true;
+            btn.textContent = '...';
+            
+            try {
+                const response = await fetch('/api/seller/connect/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                if (data.url) {
+                    window.location.href = data.url;
+                } else {
+                    alert(data.error || /*[[#{dashboard.networkError}]]*/ 'Network error');
+                    btn.disabled = false;
+                    btn.textContent = /*[[#{seller.connect.refresh.retry}]]*/ 'Try Again';
+                }
+            } catch (error) {
+                alert(/*[[#{dashboard.networkError}]]*/ 'Network error');
+                btn.disabled = false;
+                btn.textContent = /*[[#{seller.connect.refresh.retry}]]*/ 'Try Again';
+            }
+        }
+    </script>
+</head>
+<body>
+<div th:replace="~{fragments/language-selector :: selector}"></div>
+            <script th:replace="~{fragments/language-selector :: script}"></script>
+
+<div class="container">
+    <div class="card">
+        <div class="warning-icon">⚠️</div>
+        <h1 th:text="#{seller.connect.refresh.heading}">Setup Interrupted</h1>
+        <p th:text="#{seller.connect.refresh.message}">
+            The Stripe onboarding process was interrupted. Don't worry – you can continue where you left off.
+        </p>
+        
+        <div class="reasons">
+            <h4 th:text="#{seller.connect.refresh.whyTitle}">This can happen if:</h4>
+            <ul>
+                <li th:text="#{seller.connect.refresh.reason1}">You closed the browser window</li>
+                <li th:text="#{seller.connect.refresh.reason2}">The session timed out</li>
+                <li th:text="#{seller.connect.refresh.reason3}">You navigated away from Stripe</li>
+            </ul>
+        </div>
+
+        <div class="actions">
+            <button id="retry-btn" class="btn btn-stripe" onclick="retryOnboarding()" th:text="#{seller.connect.refresh.retry}">
+                Try Again
+            </button>
+            <a href="/seller/dashboard" class="btn btn-secondary" th:text="#{seller.connect.refresh.backToDashboard}">
+                Back to Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+</body>
+</html>

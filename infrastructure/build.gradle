@@ -1,0 +1,74 @@
+plugins {
+    id 'org.springframework.boot'
+}
+
+dependencies {
+    implementation project(':application')
+    
+    // Keycloak Admin Client for managing users and roles
+    implementation 'org.keycloak:keycloak-admin-client:24.0.1'
+
+    // spring boot starter bom:
+
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.flywaydb:flyway-database-postgresql'
+    implementation 'com.stripe:stripe-java:28.2.0'
+    runtimeOnly 'org.postgresql:postgresql'
+    
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    // Force testcontainers 1.20.4 for Docker API 1.44+ compatibility
+    testImplementation 'org.testcontainers:testcontainers:1.20.4'
+    testImplementation 'org.testcontainers:junit-jupiter:1.20.4'
+    testImplementation 'org.testcontainers:postgresql:1.20.4'
+    
+    // Playwright for E2E testing
+    testImplementation 'com.microsoft.playwright:playwright:1.41.0'
+    
+    // Mockito Kotlin extensions
+    testImplementation 'org.mockito.kotlin:mockito-kotlin:5.2.1'
+}
+
+bootJar {
+    enabled = true
+}
+
+jar {
+    enabled = false
+}
+
+tasks.named('bootRun') {
+    def envFile = file("$rootDir/.env")
+    if (envFile.exists()) {
+        envFile.readLines().each { line ->
+            if (!line.startsWith('#') && line.contains('=')) {
+                def (key, value) = line.split('=', 2)
+                environment key.trim(), value.trim()
+            }
+        }
+    }
+}
+
+tasks.named('test') {
+    def envFile = file("$rootDir/.env")
+    if (envFile.exists()) {
+        envFile.readLines().each { line ->
+            if (!line.startsWith('#') && line.contains('=')) {
+                def (key, value) = line.split('=', 2)
+                environment key.trim(), value.trim()
+            }
+        }
+    }
+}

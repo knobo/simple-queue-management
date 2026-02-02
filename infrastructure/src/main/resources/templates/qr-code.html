@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <title th:text="#{qr.title} + ' - Simple Queue'">Scan to Join - Simple Queue</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 50px; background-color: #f8f9fa; }
+        .language-selector { position: absolute; top: 10px; right: 20px; }
+        .language-selector a { text-decoration: none; font-size: 1.5em; margin-left: 5px; opacity: 0.6; }
+        .language-selector a.active { opacity: 1; }
+        .language-selector a:hover { opacity: 1; }
+        .qr-container { background: white; padding: 20px; display: inline-block; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h1 { color: #333; }
+        .scan-instruction { color: #666; margin-bottom: 20px; font-size: 1.1em; }
+        .divider { display: flex; align-items: center; margin: 25px 0; max-width: 350px; margin-left: auto; margin-right: auto; }
+        .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid #ddd; }
+        .divider span { padding: 0 15px; color: #888; font-size: 0.9em; }
+        .get-ticket-btn { 
+            display: inline-block; 
+            padding: 15px 40px; 
+            background-color: #007bff; 
+            color: white; 
+            text-decoration: none; 
+            border-radius: 8px; 
+            font-size: 1.1em; 
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .get-ticket-btn:hover { background-color: #0056b3; }
+        .join-link { margin-top: 30px; display: block; color: #007bff; font-size: 0.9em; }
+        
+        /* Token status indicator styles */
+        .token-status {
+            margin-top: 20px;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            display: inline-block;
+        }
+        .token-status.valid {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .token-status.warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+            animation: pulse 1s infinite;
+        }
+        .token-status.expired {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .token-status.static {
+            background-color: #e2e3e5;
+            color: #383d41;
+            border: 1px solid #d6d8db;
+        }
+        .token-status .countdown {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .token-status .refreshing {
+            display: inline-block;
+            margin-left: 8px;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #ccc;
+            border-top-color: #333;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+    <div th:replace="~{fragments/language-selector :: selector}"></div>
+    <script th:replace="~{fragments/language-selector :: script}"></script>
+
+    <h1><span th:text="#{qr.joinQueue}">Join Queue</span>: <span th:text="${queue.name}">Queue Name</span></h1>
+    
+    <!-- QR Code Section - shown when mode is QR_ONLY or BOTH -->
+    <div th:if="${queue.ticketPageMode.name() == 'QR_ONLY' or queue.ticketPageMode.name() == 'BOTH'}">
+        <div class="qr-container">
+            <div id="qrcode"></div>
+        </div>
+        
+        <p class="scan-instruction" th:text="#{qr.scanToJoin}">Scan this code to get a ticket</p>
+    </div>
+    
+    <!-- Divider - only shown when both are displayed -->
+    <div class="divider" th:if="${queue.ticketPageMode.name() == 'BOTH'}">
+        <span th:text="#{qr.or}">or</span>
+    </div>
+    
+    <!-- Button Section - shown when mode is BUTTON_ONLY or BOTH -->
+    <div th:if="${queue.ticketPageMode.name() == 'BUTTON_ONLY' or queue.ticketPageMode.name() == 'BOTH'}">
+        <a th:href="@{'/public/q/' + ${queueId} + '/join' + '?secret=' + ${queue.qrCodeSecret}}" 
+           class="get-ticket-btn" 
+           th:text="#{qr.getTicketButton}">Press here to get a ticket</a>
+    </div>
+    
+    <a th:href="@{'/public/q/' + ${queueId} + '/join' + '?secret=' + ${queue.qrCodeSecret}}" 
+       class="join-link" 
+       th:text="#{qr.directLink}"
+       th:if="${queue.ticketPageMode.name() == 'QR_ONLY'}">Direct Link (for testing)</a>
+
+    <!-- Token Status Indicator -->
+    <div id="token-status" class="token-status" style="display: none;">
+        <span id="status-text"></span>
+        <span id="countdown" class="countdown"></span>
+        <span id="refreshing" class="refreshing" style="display: none;">
+            <span class="spinner"></span>
+        </span>
+    </div>
+
+    <script th:inline="javascript">
+        var ticketPageMode = /*[[${queue.ticketPageMode.name()}]]*/ 'BOTH';
+        var queueId = /*[[${queueId}]]*/ 'default-id';
+        var currentSecret = /*[[${queue.qrCodeSecret}]]*/ 'secret';
+        var qrCodeInstance = null;
+        
+        // Configuration
+        var POLL_INTERVAL_MS = 10000; // 10 seconds
+        var WARNING_THRESHOLD_SECONDS = 30; // Show warning when < 30 seconds
+        var pollIntervalId = null;
+        var countdownIntervalId = null;
+        var currentSecondsRemaining = null;
+        var currentToken = null;
+        var isLegacyMode = true;
+        
+        // Build join URL
+        function buildJoinUrl(secret) {
+            return window.location.origin + "/public/q/" + queueId + "/join?secret=" + secret;
+        }
+        
+        // Generate or update QR code
+        function updateQrCode(secret) {
+            var joinUrl = buildJoinUrl(secret);
+            var qrElement = document.getElementById("qrcode");
+            
+            if (qrElement) {
+                // Clear existing QR code
+                qrElement.innerHTML = '';
+                
+                // Generate new QR code
+                qrCodeInstance = new QRCode(qrElement, {
+                    text: joinUrl,
+                    width: 256,
+                    height: 256
+                });
+            }
+            
+            // Update button and link hrefs
+            var buttons = document.querySelectorAll('.get-ticket-btn, .join-link');
+            buttons.forEach(function(btn) {
+                btn.href = "/public/q/" + queueId + "/join?secret=" + secret;
+            });
+        }
+        
+        // Format time remaining
+        function formatTimeRemaining(seconds) {
+            if (seconds >= 3600) {
+                var hours = Math.floor(seconds / 3600);
+                return hours + " hour" + (hours > 1 ? "s" : "");
+            } else if (seconds >= 60) {
+                var minutes = Math.floor(seconds / 60);
+                return minutes + " minute" + (minutes > 1 ? "s" : "");
+            } else {
+                return seconds + " second" + (seconds !== 1 ? "s" : "");
+            }
+        }
+        
+        // Update status display
+        function updateStatusDisplay(data) {
+            var statusEl = document.getElementById("token-status");
+            var textEl = document.getElementById("status-text");
+            var countdownEl = document.getElementById("countdown");
+            
+            statusEl.style.display = "inline-block";
+            
+            if (data.isLegacy || data.mode === "static") {
+                // Static/legacy mode - always valid
+                statusEl.className = "token-status static";
+                textEl.textContent = "Static QR Code ";
+                countdownEl.textContent = "(always valid)";
+                return;
+            }
+            
+            if (!data.valid) {
+                // Token expired or invalid
+                statusEl.className = "token-status expired";
+                textEl.textContent = "Token expired - ";
+                countdownEl.textContent = "Refreshing...";
+                return;
+            }
+            
+            currentSecondsRemaining = data.secondsRemaining;
+            
+            if (data.secondsRemaining <= WARNING_THRESHOLD_SECONDS) {
+                // Warning - about to expire
+                statusEl.className = "token-status warning";
+                textEl.textContent = "Token expires in: ";
+                countdownEl.textContent = formatTimeRemaining(data.secondsRemaining);
+            } else {
+                // Valid
+                statusEl.className = "token-status valid";
+                textEl.textContent = "Token valid for: ";
+                countdownEl.textContent = formatTimeRemaining(data.secondsRemaining);
+            }
+        }
+        
+        // Start countdown timer between polls
+        function startCountdown() {
+            if (countdownIntervalId) {
+                clearInterval(countdownIntervalId);
+            }
+            
+            countdownIntervalId = setInterval(function() {
+                if (currentSecondsRemaining !== null && !isLegacyMode) {
+                    currentSecondsRemaining = Math.max(0, currentSecondsRemaining - 1);
+                    
+                    var statusEl = document.getElementById("token-status");
+                    var textEl = document.getElementById("status-text");
+                    var countdownEl = document.getElementById("countdown");
+                    
+                    if (currentSecondsRemaining <= 0) {
+                        // Token expired - trigger reload
+                        statusEl.className = "token-status expired";
+                        textEl.textContent = "Token expired - ";
+                        countdownEl.textContent = "Refreshing...";
+                        location.reload();
+                    } else if (currentSecondsRemaining <= WARNING_THRESHOLD_SECONDS) {
+                        statusEl.className = "token-status warning";
+                        textEl.textContent = "Token expires in: ";
+                        countdownEl.textContent = formatTimeRemaining(currentSecondsRemaining);
+                    } else {
+                        countdownEl.textContent = formatTimeRemaining(currentSecondsRemaining);
+                    }
+                }
+            }, 1000);
+        }
+        
+        // Poll token status
+        function pollTokenStatus() {
+            var refreshingEl = document.getElementById("refreshing");
+            refreshingEl.style.display = "inline-block";
+            
+            fetch("/api/owner/queues/" + queueId + "/token/status", {
+                credentials: 'same-origin'
+            })
+            .then(function(response) {
+                refreshingEl.style.display = "none";
+                
+                if (response.status === 401) {
+                    // Not authenticated - owner needs to login
+                    console.log("Not authenticated - stopping token polling");
+                    stopPolling();
+                    var statusEl = document.getElementById("token-status");
+                    statusEl.style.display = "none";
+                    return null;
+                }
+                
+                if (!response.ok) {
+                    throw new Error("HTTP " + response.status);
+                }
+                
+                return response.json();
+            })
+            .then(function(data) {
+                if (!data) return;
+                
+                isLegacyMode = data.isLegacy || data.mode === "static";
+                updateStatusDisplay(data);
+                
+                // Check if token changed (for ONE_TIME mode or rotation)
+                if (data.token && data.token !== currentToken) {
+                    if (currentToken !== null) {
+                        // Token changed - update QR code
+                        console.log("Token rotated, updating QR code");
+                        currentSecret = data.token;
+                        updateQrCode(data.token);
+                    }
+                    currentToken = data.token;
+                }
+                
+                // If token is invalid, reload the page to get fresh token
+                if (!data.valid && !isLegacyMode) {
+                    console.log("Token invalid, reloading page...");
+                    location.reload();
+                }
+            })
+            .catch(function(error) {
+                console.error("Error polling token status:", error);
+                refreshingEl.style.display = "none";
+            });
+        }
+        
+        // Start polling
+        function startPolling() {
+            // Initial poll
+            pollTokenStatus();
+            
+            // Start countdown
+            startCountdown();
+            
+            // Poll every 10 seconds
+            pollIntervalId = setInterval(pollTokenStatus, POLL_INTERVAL_MS);
+        }
+        
+        // Stop polling
+        function stopPolling() {
+            if (pollIntervalId) {
+                clearInterval(pollIntervalId);
+                pollIntervalId = null;
+            }
+            if (countdownIntervalId) {
+                clearInterval(countdownIntervalId);
+                countdownIntervalId = null;
+            }
+        }
+        
+        // Initialize
+        document.addEventListener("DOMContentLoaded", function() {
+            // Generate initial QR code if it should be shown
+            if (ticketPageMode === 'QR_ONLY' || ticketPageMode === 'BOTH') {
+                updateQrCode(currentSecret);
+            }
+            
+            // Start token status polling
+            // This will only work for authenticated owners
+            startPolling();
+        });
+        
+        // Clean up on page unload
+        window.addEventListener("beforeunload", function() {
+            stopPolling();
+        });
+    </script>
+</body>
+</html>

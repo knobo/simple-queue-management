@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <title th:text="#{dashboard.title} + ' - Simple Queue'">Owner Dashboard - Simple Queue</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 20px; background-color: #f8f9fa; color: #333; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .language-selector a { text-decoration: none; font-size: 1.5em; margin-left: 5px; opacity: 0.6; }
+        .language-selector a.active { opacity: 1; }
+        .language-selector a:hover { opacity: 1; }
+        .queue-card { background: white; padding: 25px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #eaeaea; }
+        .btn { padding: 8px 16px; color: white; text-decoration: none; border-radius: 4px; border: none; cursor: pointer; font-size: 0.95em; display: inline-block; transition: opacity 0.2s; }
+        .btn:hover { opacity: 0.9; }
+        .btn-primary { background-color: #007bff; }
+        .btn-success { background-color: #28a745; }
+        .btn-warning { background-color: #ffc107; color: #212529; }
+        .btn-danger { background-color: #dc3545; }
+        .btn-secondary { background-color: #6c757d; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { text-align: left; padding: 12px 15px; border-bottom: 1px solid #eee; }
+        th { background-color: #f8f9fa; font-weight: 600; color: #555; text-transform: uppercase; font-size: 0.85em; letter-spacing: 0.5px; }
+        tr:last-child td { border-bottom: none; }
+
+        /* Toast notification */
+        .toast { position: fixed; top: 20px; right: 20px; background: #28a745; color: white; padding: 12px 24px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; opacity: 0; transform: translateY(-20px); transition: all 0.3s ease; font-weight: 500; }
+        .toast.show { opacity: 1; transform: translateY(0); }
+
+        h3 { margin-top: 0; font-size: 1.5em; color: #222; }
+        h4 { margin-top: 20px; margin-bottom: 10px; color: #555; }
+
+        .badge-success { background-color: #28a745; }
+        .badge-danger { background-color: #dc3545; }
+        .header-actions { display: flex; align-items: center; gap: 15px; }
+        .logout-btn { background: none; border: none; cursor: pointer; font-size: 1.2em; opacity: 0.6; padding: 5px; }
+        .logout-btn:hover { opacity: 1; }
+
+        /* QR Code Section Styles */
+        .qr-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        .qr-section.collapsed {
+            padding: 15px;
+        }
+        .qr-toggle-btn {
+            background: none;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 0.95em;
+            color: #495057;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            transition: background 0.2s;
+        }
+        .qr-toggle-btn:hover {
+            background: #e9ecef;
+        }
+        .qr-container {
+            background: white;
+            padding: 15px;
+            display: inline-block;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            margin: 15px 0;
+        }
+        .qr-container canvas {
+            display: block;
+        }
+        .token-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            margin-top: 10px;
+        }
+        .token-status.valid {
+            background: #d4edda;
+            color: #155724;
+        }
+        .token-status.warning {
+            background: #fff3cd;
+            color: #856404;
+            animation: pulse 1s infinite;
+        }
+        .token-status.expired {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .token-status.static {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+        .token-countdown {
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+        .progress-ring {
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .progress-ring circle {
+            transition: stroke-dashoffset 0.3s;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .spinner-small {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid #ccc;
+            border-top-color: #333;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .qr-actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .qr-actions .btn {
+            font-size: 0.85em;
+            padding: 6px 14px;
+        }
+        [x-cloak] { display: none !important; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+
+    <script th:inline="javascript">
+        const ntfyUrl = /*[[${ntfyUrl}]]*/ 'https://ntfy.sh';
+        const i18n = {
+            nextTicketCalled: /*[[#{dashboard.nextTicketCalled}]]*/ 'Next ticket called!',
+            failedToCallNext: /*[[#{dashboard.failedToCallNext}]]*/ 'Failed to call next',
+            confirmCancel: /*[[#{dashboard.confirmCancel}]]*/ 'Are you sure you want to cancel this ticket?',
+            failedToRevoke: /*[[#{dashboard.failedToRevoke}]]*/ 'Failed to revoke ticket.',
+            networkError: /*[[#{dashboard.networkError}]]*/ 'Network error occurred.',
+            failedToUpdate: /*[[#{dashboard.failedToUpdate}]]*/ 'Failed to update status.',
+            confirmDelete: /*[[#{admin.confirmDelete}]]*/ 'Are you sure you want to delete this queue?',
+            queueDeleted: /*[[#{admin.queueDeleted}]]*/ 'Queue deleted successfully!',
+            failedToDelete: /*[[#{admin.failedToDelete}]]*/ 'Failed to delete queue',
+            statusOpen: /*[[#{status.open}]]*/ 'OPEN',
+            statusClosed: /*[[#{status.closed}]]*/ 'CLOSED',
+            qrRefreshed: /*[[#{dashboard.qrRefreshed}]]*/ 'QR code refreshed!',
+            staticQr: /*[[#{dashboard.staticQr}]]*/ 'Static QR Code',
+            tokenExpired: /*[[#{dashboard.tokenExpired}]]*/ 'Token expired',
+            validFor: /*[[#{dashboard.validFor}]]*/ 'Valid for',
+            showQrCode: /*[[#{dashboard.showQrCode}]]*/ 'Show QR Code',
+            hideQrCode: /*[[#{dashboard.hideQrCode}]]*/ 'Hide QR Code',
+            refreshQr: /*[[#{dashboard.refreshQr}]]*/ 'Refresh QR',
+            openFullscreen: /*[[#{dashboard.openFullscreen}]]*/ 'Open Fullscreen',
+            selectCounter: /*[[#{dashboard.selectCounter}]]*/ 'Select counter',
+            startAtCounter: /*[[#{dashboard.startAtCounter}]]*/ 'Start at counter',
+            workingAt: /*[[#{dashboard.workingAt}]]*/ 'Working at',
+            endSession: /*[[#{dashboard.endSession}]]*/ 'End session',
+            sessionStarted: /*[[#{dashboard.sessionStarted}]]*/ 'Session started!',
+            sessionEnded: /*[[#{dashboard.sessionEnded}]]*/ 'Session ended',
+            failedToStartSession: /*[[#{dashboard.failedToStartSession}]]*/ 'Failed to start session',
+            failedToEndSession: /*[[#{dashboard.failedToEndSession}]]*/ 'Failed to end session',
+            counterInUse: /*[[#{dashboard.counterInUse}]]*/ 'Counter is already in use'
+        };
+
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('queueManager', (id, initialOpen, topic, qrCodeSecret) => ({
+                id: id,
+                open: initialOpen,
+                topic: topic,
+                
+                // QR Code state
+                qrExpanded: false,
+                qrInstance: null,
+                currentToken: qrCodeSecret,
+                tokenMode: 'static',
+                isLegacy: true,
+                secondsRemaining: null,
+                tokenValid: true,
+                isRefreshing: false,
+                pollInterval: null,
+                countdownInterval: null,
+                
+                // Counter session state
+                counters: [],
+                currentSession: null,
+                selectedCounterId: null,
+                loadingCounters: false,
+                sessionLoading: false,
+                
+                // Constants
+                WARNING_THRESHOLD: 30,
+                POLL_INTERVAL_MS: 10000,
+
+                async init() {
+                    // Load counters and session
+                    await this.loadCounters();
+                    await this.loadSession();
+                    
+                    if (this.topic) {
+                         const baseUrl = ntfyUrl.endsWith('/') ? ntfyUrl.slice(0, -1) : ntfyUrl;
+                         const sseUrl = `${baseUrl}/${this.topic}/sse`;
+
+                         console.log(`Listening to ${sseUrl}`);
+                         const eventSource = new EventSource(sseUrl);
+
+                         eventSource.onmessage = (event) => {
+                             console.log("New message:", event.data);
+                             window.location.reload();
+                         };
+
+                         eventSource.onerror = (err) => {
+                             console.warn("EventSource error:", err);
+                         };
+                    }
+                },
+                
+                // Load available counters
+                async loadCounters() {
+                    this.loadingCounters = true;
+                    try {
+                        const response = await fetch(`/api/owner/queues/${this.id}/counters`);
+                        if (response.ok) {
+                            this.counters = await response.json();
+                            // Pre-select first available counter
+                            const available = this.counters.find(c => !c.isOccupied);
+                            if (available) {
+                                this.selectedCounterId = available.id;
+                            }
+                        }
+                    } catch (e) { console.error('Error loading counters:', e); }
+                    this.loadingCounters = false;
+                },
+                
+                // Load current session
+                async loadSession() {
+                    try {
+                        const response = await fetch(`/api/owner/queues/${this.id}/session`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.currentSession = data; // null if no session
+                        }
+                    } catch (e) { console.error('Error loading session:', e); }
+                },
+                
+                // Start session at selected counter
+                async startSession() {
+                    if (!this.selectedCounterId) return;
+                    
+                    this.sessionLoading = true;
+                    try {
+                        const response = await fetch(`/api/owner/queues/${this.id}/session/start`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ counterId: this.selectedCounterId })
+                        });
+                        
+                        if (response.ok) {
+                            this.currentSession = await response.json();
+                            this.showToast(i18n.sessionStarted);
+                            await this.loadCounters(); // Refresh counter status
+                        } else {
+                            const text = await response.text();
+                            if (text.includes('already in use')) {
+                                alert(i18n.counterInUse);
+                            } else {
+                                alert(i18n.failedToStartSession + ': ' + text);
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error starting session:', e);
+                        alert(i18n.failedToStartSession);
+                    }
+                    this.sessionLoading = false;
+                },
+                
+                // End current session
+                async endSession() {
+                    this.sessionLoading = true;
+                    try {
+                        const response = await fetch(`/api/owner/queues/${this.id}/session/end`, {
+                            method: 'POST'
+                        });
+                        
+                        if (response.ok) {
+                            this.currentSession = null;
+                            this.showToast(i18n.sessionEnded);
+                            await this.loadCounters(); // Refresh counter status
+                        } else {
+                            alert(i18n.failedToEndSession);
+                        }
+                    } catch (e) {
+                        console.error('Error ending session:', e);
+                        alert(i18n.failedToEndSession);
+                    }
+                    this.sessionLoading = false;
+                },
+                
+                // Toggle QR code section
+                toggleQr() {
+                    this.qrExpanded = !this.qrExpanded;
+                    if (this.qrExpanded) {
+                        this.$nextTick(() => {
+                            this.initQrCode();
+                            this.startTokenPolling();
+                        });
+                    } else {
+                        this.stopTokenPolling();
+                    }
+                },
+                
+                // Initialize QR code
+                initQrCode() {
+                    const container = this.$refs.qrContainer;
+                    if (!container) return;
+                    
+                    container.innerHTML = '';
+                    const joinUrl = this.buildJoinUrl(this.currentToken);
+                    
+                    this.qrInstance = new QRCode(container, {
+                        text: joinUrl,
+                        width: 180,
+                        height: 180,
+                        correctLevel: QRCode.CorrectLevel.M
+                    });
+                },
+                
+                // Build join URL
+                buildJoinUrl(token) {
+                    if (this.isLegacy || this.tokenMode === 'static') {
+                        return window.location.origin + '/public/q/' + this.id + '/join?secret=' + token;
+                    }
+                    return window.location.origin + '/q/' + token;
+                },
+                
+                // Update QR code with new token
+                updateQrCode(newToken) {
+                    this.currentToken = newToken;
+                    if (this.qrInstance && this.$refs.qrContainer) {
+                        this.$refs.qrContainer.innerHTML = '';
+                        const joinUrl = this.buildJoinUrl(newToken);
+                        this.qrInstance = new QRCode(this.$refs.qrContainer, {
+                            text: joinUrl,
+                            width: 180,
+                            height: 180,
+                            correctLevel: QRCode.CorrectLevel.M
+                        });
+                    }
+                },
+                
+                // Start polling token status
+                startTokenPolling() {
+                    this.pollTokenStatus();
+                    this.pollInterval = setInterval(() => this.pollTokenStatus(), this.POLL_INTERVAL_MS);
+                    this.startCountdown();
+                },
+                
+                // Stop polling
+                stopTokenPolling() {
+                    if (this.pollInterval) {
+                        clearInterval(this.pollInterval);
+                        this.pollInterval = null;
+                    }
+                    if (this.countdownInterval) {
+                        clearInterval(this.countdownInterval);
+                        this.countdownInterval = null;
+                    }
+                },
+                
+                // Poll token status from API
+                async pollTokenStatus() {
+                    this.isRefreshing = true;
+                    try {
+                        const response = await fetch(`/api/owner/queues/${this.id}/token/status`, {
+                            credentials: 'same-origin'
+                        });
+                        
+                        if (!response.ok) {
+                            console.warn('Failed to fetch token status:', response.status);
+                            this.isRefreshing = false;
+                            return;
+                        }
+                        
+                        const data = await response.json();
+                        
+                        this.isLegacy = data.isLegacy;
+                        this.tokenMode = data.mode;
+                        this.tokenValid = data.valid;
+                        this.secondsRemaining = data.secondsRemaining;
+                        
+                        // Check if token changed
+                        if (data.token && data.token !== this.currentToken) {
+                            console.log('Token rotated, updating QR code');
+                            this.updateQrCode(data.token);
+                        }
+                        
+                        // If token expired, trigger refresh
+                        if (!data.valid && !this.isLegacy) {
+                            await this.rotateToken();
+                        }
+                    } catch (error) {
+                        console.error('Error polling token status:', error);
+                    }
+                    this.isRefreshing = false;
+                },
+                
+                // Start countdown timer
+                startCountdown() {
+                    this.countdownInterval = setInterval(() => {
+                        if (this.secondsRemaining !== null && !this.isLegacy && this.tokenMode !== 'static') {
+                            this.secondsRemaining = Math.max(0, this.secondsRemaining - 1);
+                            
+                            if (this.secondsRemaining <= 0) {
+                                this.tokenValid = false;
+                                this.pollTokenStatus();
+                            }
+                        }
+                    }, 1000);
+                },
+                
+                // Manually rotate token
+                async rotateToken() {
+                    this.isRefreshing = true;
+                    try {
+                        const response = await fetch(`/api/queues/${this.id}/tokens`, {
+                            method: 'POST',
+                            credentials: 'same-origin'
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.updateQrCode(data.token);
+                            this.secondsRemaining = data.secondsUntilExpiry;
+                            this.tokenValid = true;
+                            this.showToast(i18n.qrRefreshed || 'QR code refreshed!');
+                        }
+                    } catch (error) {
+                        console.error('Error rotating token:', error);
+                    }
+                    this.isRefreshing = false;
+                },
+                
+                // Format time remaining
+                formatTime(seconds) {
+                    if (seconds === null || seconds === undefined) return '';
+                    if (seconds >= 3600) {
+                        const hours = Math.floor(seconds / 3600);
+                        const mins = Math.floor((seconds % 3600) / 60);
+                        return `${hours}h ${mins}m`;
+                    } else if (seconds >= 60) {
+                        const mins = Math.floor(seconds / 60);
+                        const secs = seconds % 60;
+                        return `${mins}:${String(secs).padStart(2, '0')}`;
+                    }
+                    return `${seconds}s`;
+                },
+                
+                // Get status class
+                getStatusClass() {
+                    if (this.isLegacy || this.tokenMode === 'static') return 'static';
+                    if (!this.tokenValid) return 'expired';
+                    if (this.secondsRemaining <= this.WARNING_THRESHOLD) return 'warning';
+                    return 'valid';
+                },
+                
+                // Get status text
+                getStatusText() {
+                    if (this.isLegacy || this.tokenMode === 'static') {
+                        return i18n.staticQr || 'Static QR Code';
+                    }
+                    if (!this.tokenValid) {
+                        return i18n.tokenExpired || 'Token expired';
+                    }
+                    return i18n.validFor || 'Valid for';
+                },
+                
+                // Calculate progress for ring (0-100)
+                getProgress() {
+                    if (this.isLegacy || this.tokenMode === 'static' || !this.secondsRemaining) return 100;
+                    // Assume max is 5 minutes (300 seconds) for visual purposes
+                    const maxSeconds = 300;
+                    return Math.min(100, (this.secondsRemaining / maxSeconds) * 100);
+                },
+
+                async toggleStatus() {
+                    const nextStatus = !this.open;
+                    try {
+                        const response = await fetch(`/api/owner/queues/${this.id}/status?open=${nextStatus}`, {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+
+                        if (response.ok) {
+                            this.open = nextStatus;
+                        } else {
+                            alert(i18n.failedToUpdate);
+                        }
+                    } catch (error) {
+                        console.error('Error toggling status:', error);
+                        alert(i18n.networkError);
+                    }
+                },
+
+                async callNext() {
+                    try {
+                        const response = await fetch(`/api/owner/queues/${this.id}/next`, {
+                            method: 'POST'
+                        });
+
+                        if (response.ok) {
+                            this.showToast(i18n.nextTicketCalled);
+                            setTimeout(() => window.location.reload(), 800);
+                        } else {
+                            const errorText = await response.text();
+                            alert(i18n.failedToCallNext + ': ' + (errorText || 'Error'));
+                        }
+                    } catch (error) {
+                        console.error('Error calling next:', error);
+                    }
+                },
+
+                showToast(message) {
+                    let toast = document.getElementById('toast');
+                    if (!toast) {
+                        toast = document.createElement('div');
+                        toast.id = 'toast';
+                        toast.className = 'toast';
+                        document.body.appendChild(toast);
+                    }
+                    toast.textContent = message;
+                    toast.classList.add('show');
+                    setTimeout(() => toast.classList.remove('show'), 2000);
+                },
+
+                // Serve specific ticket (from Waiting list)
+                async serveTicket(ticketId) {
+                   try {
+                        const response = await fetch(`/api/owner/queues/${this.id}/tickets/${ticketId}/serve`, {
+                            method: 'POST'
+                        });
+
+                        if (response.ok) {
+                            window.location.reload();
+                        } else {
+                            const text = await response.text();
+                            alert('Failed to serve ticket: ' + text);
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                    }
+                },
+
+                // Complete specific ticket (from Active list)
+                async completeTicket(ticketId) {
+                   try {
+                        const response = await fetch(`/api/owner/queues/${this.id}/tickets/${ticketId}/complete`, {
+                            method: 'POST'
+                        });
+
+                        if (response.ok) {
+                            window.location.reload();
+                        } else {
+                            const text = await response.text();
+                            alert('Failed to complete ticket: ' + text);
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                    }
+                },
+
+                async revokeTicket(ticketId) {
+                    if (!confirm(i18n.confirmCancel)) return;
+
+                    try {
+                        // Sends a DELETE request to remove the ticket
+                        const response = await fetch(`/api/owner/queues/${this.id}/tickets/${ticketId}`, {
+                            method: 'DELETE'
+                        });
+
+                        if (response.ok) {
+                            // If successful, remove the row from the DOM
+                            const row = document.getElementById('ticket-row-' + ticketId);
+                            if (row) row.remove();
+                        } else {
+                            alert(i18n.failedToRevoke);
+                        }
+                    } catch (error) {
+                        console.error('Error revoking ticket:', error);
+                        alert(i18n.networkError);
+                    }
+                },
+
+                async deleteQueue() {
+                    if (!confirm(i18n.confirmDelete)) return;
+
+                    try {
+                        const response = await fetch(`/api/owner/queues/${this.id}`, {
+                            method: 'DELETE'
+                        });
+
+                        if (response.ok) {
+                            alert(i18n.queueDeleted);
+                            window.location.reload();
+                        } else {
+                            const errorText = await response.text();
+                            alert(i18n.failedToDelete + ': ' + (errorText || 'Unknown error'));
+                        }
+                    } catch (error) {
+                        console.error('Error deleting queue:', error);
+                        alert(i18n.networkError);
+                    }
+                }
+            }));
+        });
+    </script>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1 th:text="#{dashboard.title}">Owner Dashboard</h1>
+        <div class="header-actions">
+            <a th:if="${isSuperadmin}" href="/admin/sales" class="btn btn-primary" style="font-size: 0.85em; padding: 6px 12px;">🛡️ Sales Admin</a>
+            <a th:if="${isSuperadmin}" href="/admin/tier-limits" class="btn btn-warning" style="font-size: 0.85em; padding: 6px 12px;">⚙️ Tier Limits</a>
+            <a href="/subscription" class="btn btn-secondary" style="font-size: 0.85em; padding: 6px 12px;" th:text="#{subscription.title}">Subscription</a>
+            <div th:replace="~{fragments/language-selector :: selector}"></div>
+            <script th:replace="~{fragments/language-selector :: script}"></script>
+            <form th:action="@{/logout}" method="post" style="margin: 0;">
+                <button type="submit" class="logout-btn" th:title="#{admin.logout}">🚪</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="queue-list" th:if="${not #lists.isEmpty(queues)}">
+        <!-- Iterate over queues and initialize Alpine component for each -->
+        <div th:each="queue : ${queues}"
+             class="queue-card"
+             th:attr="x-data='queueManager(\'' + ${queue.id} + '\', ' + ${queue.open} + ', \'' + ${queue.ntfyTopic} + '\', \'' + ${queue.qrCodeSecret} + '\')'">
+
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+                <div>
+                    <h3 th:text="${queue.name}" style="margin: 0; font-size: 1.8em; font-weight: 700;">Queue Name</h3>
+                    <div style="margin-top: 5px;">
+                        <span x-text="open ? i18n.statusOpen : i18n.statusClosed"
+                              :class="open ? 'badge-success' : 'badge-danger'"
+                              style="display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; color: white;">
+                        </span>
+                    </div>
+                </div>
+                <div>
+                     <!-- Admin Link -->
+                    <a th:href="@{'/queue/' + ${queue.id} + '/admin'}" class="btn btn-secondary" style="font-size: 0.85em;" th:text="#{dashboard.admin}">Admin</a>
+                </div>
+            </div>
+
+            <!-- Inline QR Code Section -->
+            <div class="qr-section" :class="{ collapsed: !qrExpanded }">
+                <!-- Toggle Button -->
+                <button type="button" class="qr-toggle-btn" @click="toggleQr()" x-show="!qrExpanded">
+                    <span>📱</span>
+                    <span x-text="i18n.showQrCode">Show QR Code</span>
+                </button>
+                
+                <!-- Expanded QR View -->
+                <div x-show="qrExpanded" x-cloak>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <span style="font-weight: 600; color: #333;" th:text="#{qr.scanToJoin}">Scan to join queue</span>
+                        <button type="button" @click="toggleQr()" style="background: none; border: none; cursor: pointer; font-size: 1.2em; opacity: 0.6;">✕</button>
+                    </div>
+                    
+                    <!-- QR Code Container -->
+                    <div class="qr-container">
+                        <div x-ref="qrContainer"></div>
+                    </div>
+                    
+                    <!-- Token Status Indicator -->
+                    <div class="token-status" :class="getStatusClass()">
+                        <!-- Progress Ring for rotating tokens -->
+                        <template x-if="!isLegacy && tokenMode !== 'static' && tokenValid">
+                            <svg class="progress-ring" width="20" height="20" viewBox="0 0 20 20">
+                                <circle cx="10" cy="10" r="8" fill="none" stroke="#e0e0e0" stroke-width="2"/>
+                                <circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="2"
+                                        stroke-dasharray="50.27"
+                                        :stroke-dashoffset="50.27 * (1 - getProgress() / 100)"/>
+                            </svg>
+                        </template>
+                        
+                        <!-- Spinner when refreshing -->
+                        <span x-show="isRefreshing" class="spinner-small"></span>
+                        
+                        <!-- Status Text -->
+                        <span x-text="getStatusText()"></span>
+                        
+                        <!-- Countdown -->
+                        <span x-show="!isLegacy && tokenMode !== 'static' && secondsRemaining !== null" 
+                              class="token-countdown"
+                              x-text="formatTime(secondsRemaining)"></span>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="qr-actions">
+                        <!-- Refresh Button (only for rotating tokens) -->
+                        <button type="button" 
+                                class="btn btn-secondary"
+                                x-show="!isLegacy && tokenMode !== 'static'"
+                                @click="rotateToken()"
+                                :disabled="isRefreshing">
+                            <span x-show="isRefreshing" class="spinner-small" style="margin-right: 5px;"></span>
+                            <span x-text="i18n.refreshQr">Refresh QR</span>
+                        </button>
+                        
+                        <!-- Fullscreen Link -->
+                        <a th:href="@{'/public/q/' + ${queue.id} + '/qr'}" 
+                           class="btn btn-primary" 
+                           target="_blank"
+                           x-text="i18n.openFullscreen">Open Fullscreen</a>
+                        
+                        <!-- Display Mode Link (for TV/monitor) -->
+                        <a th:if="${queue.displayToken != null}" 
+                           th:href="@{'/display/' + ${queue.displayToken}}" 
+                           class="btn btn-secondary" 
+                           target="_blank"
+                           th:title="#{dashboard.displayModeTitle}">📺 Display</a>
+                        
+                        <!-- Kiosk Mode Link (auto-refresh QR) -->
+                        <a th:if="${queue.displayToken != null}" 
+                           th:href="@{'/kiosk/' + ${queue.displayToken}}" 
+                           class="btn btn-secondary" 
+                           target="_blank"
+                           th:title="#{dashboard.kioskModeTitle}">🖥️ Kiosk</a>
+                    </div>
+                    
+                    <!-- Static QR URL (shown only for STATIC mode) -->
+                    <div th:if="${queue.isStaticMode}" style="margin-top: 15px; padding: 10px; background: #e9ecef; border-radius: 6px; font-size: 0.85em;">
+                        <strong th:text="#{dashboard.staticQrUrl}">Static QR URL:</strong>
+                        <code th:id="'static-url-' + ${queue.id}" 
+                              th:text="${queue.staticJoinUrl}">
+                        </code>
+                        <button type="button" 
+                                class="btn btn-secondary" 
+                                style="padding: 2px 8px; font-size: 0.8em; margin-left: 8px;"
+                                th:onclick="|navigator.clipboard.writeText(document.getElementById('static-url-' + '${queue.id}').textContent)|"
+                                th:title="#{dashboard.copyUrl}">📋</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Counter Session Section -->
+            <div x-show="counters.length > 0" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">
+                <!-- No active session: show counter selection -->
+                <div x-show="!currentSession" style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                    <span style="font-weight: 500; color: #495057;">🖥️</span>
+                    <select x-model="selectedCounterId" 
+                            style="padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; font-size: 0.95em; min-width: 180px;">
+                        <template x-for="counter in counters" :key="counter.id">
+                            <option :value="counter.id" 
+                                    :disabled="counter.isOccupied"
+                                    x-text="counter.displayName + (counter.isOccupied ? ' (in use)' : '')">
+                            </option>
+                        </template>
+                    </select>
+                    <button type="button" 
+                            class="btn btn-success"
+                            @click="startSession()"
+                            :disabled="sessionLoading || !selectedCounterId"
+                            style="padding: 8px 16px;">
+                        <span x-show="sessionLoading" style="margin-right: 5px;">⏳</span>
+                        <span x-text="i18n.startAtCounter">Start at counter</span>
+                    </button>
+                </div>
+                
+                <!-- Active session: show current counter -->
+                <div x-show="currentSession" style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                    <span style="font-weight: 500; color: #28a745;">✓</span>
+                    <span style="font-size: 1em;">
+                        <span x-text="i18n.workingAt">Working at</span>: 
+                        <strong x-text="currentSession?.counterDisplayName" style="color: #28a745;"></strong>
+                    </span>
+                    <button type="button" 
+                            class="btn btn-secondary"
+                            @click="endSession()"
+                            :disabled="sessionLoading"
+                            style="padding: 6px 12px; font-size: 0.9em;">
+                        <span x-show="sessionLoading" style="margin-right: 5px;">⏳</span>
+                        <span x-text="i18n.endSession">End session</span>
+                    </button>
+                </div>
+            </div>
+
+            <div style="margin-top: 25px; margin-bottom: 30px; display: flex; gap: 10px;">
+                <!-- Call Next Ticket -->
+                <button type="button"
+                        class="btn btn-primary"
+                        style="flex-grow: 1; padding: 12px; font-size: 1.1em;"
+                        @click="callNext()"
+                        th:text="#{dashboard.callNext}">
+                    Call Next
+                </button>
+
+                <!-- Toggle Status Button -->
+                <button type="button"
+                        class="btn"
+                        :class="open ? 'btn-warning' : 'btn-success'"
+                        @click="toggleStatus()"
+                        th:attr="data-close=#{dashboard.closeQueue}, data-open=#{dashboard.openQueue}"
+                        x-text="open ? $el.dataset.close : $el.dataset.open">
+                </button>
+            </div>
+
+            <!-- Active Tickets Section -->
+            <h4 th:text="#{dashboard.nowServing}">Now Serving</h4>
+            <div th:if="${#lists.isEmpty(queue.activeTickets)}" style="margin-bottom: 20px; color: #777; font-style: italic;" th:text="#{dashboard.noActiveTickets}">
+                No active tickets.
+            </div>
+            <table th:if="${not #lists.isEmpty(queue.activeTickets)}" style="margin-bottom: 30px; border-left: 4px solid #28a745;">
+                <thead>
+                <tr>
+                    <th>Code</th>
+                    <th th:text="#{admin.name}">Name</th>
+                    <th th:text="#{admin.action}">Action</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="ticket : ${queue.activeTickets}" th:id="'active-row-' + ${ticket.id}" style="background-color: #f0fff4;">
+                    <td th:text="${ticket.code}">A-101</td>
+                    <td th:text="${ticket.name} ?: '-'">John</td>
+                    <td>
+                        <button type="button"
+                                class="btn btn-success"
+                                th:data-ticket-id="${ticket.id}"
+                                @click="completeTicket($el.dataset.ticketId)"
+                                th:text="#{dashboard.done}">
+                            Done
+                        </button>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+
+            <!-- Waiting Tickets Section -->
+            <h4 th:text="#{dashboard.waiting}">Waiting</h4>
+            <div th:if="${#lists.isEmpty(queue.waitingTickets)}" style="color: #777; font-style: italic;" th:text="#{dashboard.noWaitingTickets}">
+                No waiting tickets.
+            </div>
+
+            <table th:if="${not #lists.isEmpty(queue.waitingTickets)}">
+                <thead>
+                <tr>
+                    <th>Code</th>
+                    <th th:text="#{admin.name}">Name</th>
+                    <th th:text="#{admin.action}">Action</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="ticket : ${queue.waitingTickets}" th:id="'ticket-row-' + ${ticket.id}">
+                    <td th:text="${ticket.code}">A-102</td>
+                    <td th:text="${ticket.name} ?: '-'">Jane</td>
+                    <td>
+                        <div style="display: flex; gap: 5px;">
+                            <button type="button"
+                                    class="btn btn-primary"
+                                    style="padding: 4px 8px; font-size: 0.85em;"
+                                    th:data-ticket-id="${ticket.id}"
+                                    @click="serveTicket($el.dataset.ticketId)"
+                                    th:text="#{dashboard.call}">
+                                Call
+                            </button>
+                            <button type="button"
+                                    class="btn btn-danger"
+                                    style="padding: 4px 8px; font-size: 0.85em;"
+                                    th:data-ticket-id="${ticket.id}"
+                                    @click="revokeTicket($el.dataset.ticketId)">
+                                X
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div th:if="${#lists.isEmpty(queues)}" style="text-align: center; margin-top: 50px;">
+        <p style="color: #666; margin-bottom: 20px;" th:text="#{dashboard.noQueues}">You have no queues yet.</p>
+        <a href="/create-queue" class="btn btn-primary" th:text="#{dashboard.createNew}">Create New Queue</a>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <title th:text="${success} ? 'Stripe Connect - Fullført' : 'Stripe Connect - Prøv igjen'">Stripe Connect - Simple Queue</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 40px; text-align: center; background-color: #f8f9fa; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        h1 { font-size: 2em; margin-bottom: 10px; }
+        h1.success { color: #28a745; }
+        h1.warning { color: #ffc107; }
+        p { margin-bottom: 30px; line-height: 1.6; color: #666; }
+        .icon { font-size: 4em; margin-bottom: 20px; }
+        .btn { display: inline-block; padding: 12px 24px; background-color: #007bff; color: white; text-decoration: none; border-radius: 4px; margin: 5px; }
+        .btn:hover { background-color: #0056b3; }
+        .btn-secondary { background-color: #6c757d; }
+        .btn-secondary:hover { background-color: #545b62; }
+        .btn-success { background-color: #28a745; }
+        .btn-success:hover { background-color: #1e7e34; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Success state -->
+        <div th:if="${success}">
+            <div class="icon">✅</div>
+            <h1 class="success">Stripe Connect oppdatert!</h1>
+            <p th:text="${message}">Din Stripe-konto er oppdatert.</p>
+            <a href="/dashboard" class="btn btn-success">Gå til dashboard</a>
+        </div>
+
+        <!-- Refresh/retry state -->
+        <div th:unless="${success}">
+            <div class="icon">⚠️</div>
+            <h1 class="warning">Onboarding avbrutt</h1>
+            <p th:text="${message}">Noe gikk galt under onboarding-prosessen.</p>
+            
+            <div th:if="${showRetryButton}">
+                <p>Klikk knappen nedenfor for å generere en ny onboarding-lenke.</p>
+                <form action="/api/seller/connect/refresh-link" method="post" style="display: inline;">
+                    <button type="button" class="btn" onclick="retryOnboarding()">Prøv igjen</button>
+                </form>
+                <a href="/dashboard" class="btn btn-secondary">Gå til dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <script th:if="${showRetryButton}">
+        async function retryOnboarding() {
+            try {
+                const response = await fetch('/api/seller/connect/refresh-link', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    window.location.href = data.onboardingUrl;
+                } else {
+                    alert('Kunne ikke generere ny lenke. Prøv igjen senere.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Noe gikk galt. Prøv igjen senere.');
+            }
+        }
+    </script>
+</body>
+</html>

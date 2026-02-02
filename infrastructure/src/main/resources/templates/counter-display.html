@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <title th:text="${queue.name} + ' - Counter ' + ${counterName}">Counter Display</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white; 
+            min-height: 100vh; 
+            display: flex; 
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .header { 
+            text-align: center; 
+            padding: 20px 15px; 
+            background: rgba(0,0,0,0.3);
+            border-bottom: 3px solid rgba(255,255,255,0.1);
+        }
+        
+        .queue-name { 
+            font-size: clamp(1.2em, 4vw, 2em); 
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+        
+        .counter-name {
+            font-size: clamp(1em, 3vw, 1.5em);
+            color: #ffd93d;
+            font-weight: bold;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            margin-left: 15px;
+            vertical-align: middle;
+        }
+        
+        .status-open { background: #28a745; }
+        .status-closed { background: #dc3545; }
+        
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+        
+        .now-serving-label {
+            font-size: clamp(1.5em, 5vw, 3em);
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            opacity: 0.8;
+            margin-bottom: 20px;
+        }
+        
+        .ticket-number {
+            font-size: clamp(6em, 25vw, 15em);
+            font-weight: bold;
+            color: #ffd93d;
+            text-shadow: 0 0 30px rgba(255, 217, 61, 0.5);
+            line-height: 1;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        .ticket-number.empty {
+            font-size: clamp(2em, 8vw, 4em);
+            color: rgba(255, 255, 255, 0.4);
+            animation: none;
+        }
+        
+        @keyframes glow {
+            from { text-shadow: 0 0 30px rgba(255, 217, 61, 0.5); }
+            to { text-shadow: 0 0 50px rgba(255, 217, 61, 0.8), 0 0 80px rgba(255, 217, 61, 0.4); }
+        }
+        
+        /* Flash animation when ticket changes */
+        .ticket-number.flash {
+            animation: flashNew 1s ease-out;
+        }
+        
+        @keyframes flashNew {
+            0% { transform: scale(0.8); opacity: 0; }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .counter-badge {
+            margin-top: 30px;
+            font-size: clamp(1.5em, 5vw, 3em);
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .counter-badge span {
+            color: #4fc3f7;
+            font-weight: bold;
+        }
+        
+        .next-up {
+            margin-top: 50px;
+            padding: 25px 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            text-align: center;
+            min-width: 300px;
+        }
+        
+        .next-up-label {
+            font-size: clamp(0.9em, 2.5vw, 1.2em);
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            opacity: 0.7;
+            margin-bottom: 15px;
+        }
+        
+        .next-tickets {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .next-ticket {
+            font-size: clamp(1.2em, 3vw, 1.8em);
+            padding: 8px 20px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        
+        .next-ticket:first-child {
+            background: rgba(79, 195, 247, 0.3);
+            color: #4fc3f7;
+        }
+        
+        .waiting-count {
+            margin-top: 15px;
+            font-size: 1em;
+            opacity: 0.6;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 15px;
+            background: rgba(0,0,0,0.3);
+            font-size: 0.9em;
+            opacity: 0.5;
+        }
+        
+        /* Sound notification indicator */
+        .sound-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .sound-indicator:hover {
+            background: rgba(0,0,0,0.7);
+        }
+        
+        .sound-indicator.muted {
+            opacity: 0.5;
+        }
+        
+        /* Mobile optimizations */
+        @media (max-width: 600px) {
+            .header { padding: 15px 10px; }
+            .main-content { padding: 20px 15px; }
+            .next-up { padding: 15px 20px; min-width: auto; width: 90%; }
+            .next-tickets { gap: 10px; }
+        }
+        
+        /* Landscape TV mode */
+        @media (min-width: 1200px) and (min-height: 600px) {
+            .main-content {
+                flex-direction: row;
+                gap: 80px;
+            }
+            
+            .next-up {
+                margin-top: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sound-indicator" id="soundToggle" title="Toggle sound">
+        🔔
+    </div>
+
+    <div class="header">
+        <div class="queue-name">
+            <span th:text="${queue.name}">Queue Name</span>
+            <span class="status-badge" 
+                  id="statusBadge"
+                  th:classappend="${queue.open ? 'status-open' : 'status-closed'}"
+                  th:text="${queue.open ? 'Åpen' : 'Stengt'}">
+                Status
+            </span>
+        </div>
+        <div class="counter-name">Skranke <span th:text="${counterName}">1</span></div>
+    </div>
+
+    <div class="main-content">
+        <div class="serving-section">
+            <div class="now-serving-label">Nå betjenes / Now Serving</div>
+            <div class="ticket-number" id="ticketNumber" th:classappend="${currentTicket == null ? 'empty' : ''}">
+                <span th:if="${currentTicket != null}" th:text="${currentTicket.code}">A-042</span>
+                <span th:if="${currentTicket == null}">—</span>
+            </div>
+            <div class="counter-badge">Skranke <span th:text="${counterName}">1</span></div>
+        </div>
+        
+        <div class="next-up" th:if="${!nextTickets.isEmpty()}">
+            <div class="next-up-label">Neste / Next Up</div>
+            <div class="next-tickets" id="nextTickets">
+                <span class="next-ticket" th:each="ticket : ${nextTickets}" th:text="${ticket.code}">A-043</span>
+            </div>
+            <div class="waiting-count" id="waitingCount">
+                <span th:text="${waitingCount}">5</span> i kø / in queue
+            </div>
+        </div>
+        
+        <div class="next-up" th:if="${nextTickets.isEmpty() && currentTicket == null}">
+            <div class="next-up-label">Ingen i kø / Queue Empty</div>
+        </div>
+    </div>
+
+    <div class="footer">
+        Counter Display • SimpleQueue
+    </div>
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        (function() {
+            'use strict';
+            
+            const queueId = /*[[${queue.id}]]*/ '';
+            const displayToken = /*[[${queue.displayToken}]]*/ '';
+            let currentTicketCode = /*[[${currentTicket?.code}]]*/ null;
+            let soundEnabled = localStorage.getItem('counterSoundEnabled') !== 'false';
+            
+            // DOM elements
+            const ticketNumberEl = document.getElementById('ticketNumber');
+            const statusBadgeEl = document.getElementById('statusBadge');
+            const nextTicketsEl = document.getElementById('nextTickets');
+            const waitingCountEl = document.getElementById('waitingCount');
+            const soundToggle = document.getElementById('soundToggle');
+            
+            // Initialize sound toggle state
+            updateSoundToggle();
+            
+            soundToggle.addEventListener('click', function() {
+                soundEnabled = !soundEnabled;
+                localStorage.setItem('counterSoundEnabled', soundEnabled);
+                updateSoundToggle();
+            });
+            
+            function updateSoundToggle() {
+                soundToggle.textContent = soundEnabled ? '🔔' : '🔕';
+                soundToggle.classList.toggle('muted', !soundEnabled);
+            }
+            
+            // Play notification sound
+            function playNotificationSound() {
+                if (!soundEnabled) return;
+                
+                // Create a simple beep using Web Audio API
+                try {
+                    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = audioCtx.createOscillator();
+                    const gainNode = audioCtx.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    
+                    oscillator.frequency.value = 880; // A5 note
+                    oscillator.type = 'sine';
+                    
+                    gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                    
+                    oscillator.start(audioCtx.currentTime);
+                    oscillator.stop(audioCtx.currentTime + 0.5);
+                    
+                    // Second beep
+                    setTimeout(() => {
+                        const osc2 = audioCtx.createOscillator();
+                        const gain2 = audioCtx.createGain();
+                        osc2.connect(gain2);
+                        gain2.connect(audioCtx.destination);
+                        osc2.frequency.value = 1100;
+                        osc2.type = 'sine';
+                        gain2.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                        gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                        osc2.start(audioCtx.currentTime);
+                        osc2.stop(audioCtx.currentTime + 0.5);
+                    }, 200);
+                } catch (e) {
+                    console.log('Audio not available:', e);
+                }
+            }
+            
+            // Update display with new data
+            function updateDisplay(data) {
+                // Update queue status
+                if (data.queueOpen) {
+                    statusBadgeEl.className = 'status-badge status-open';
+                    statusBadgeEl.textContent = 'Åpen';
+                } else {
+                    statusBadgeEl.className = 'status-badge status-closed';
+                    statusBadgeEl.textContent = 'Stengt';
+                }
+                
+                // Check if ticket changed
+                const newTicketCode = data.currentTicketCode;
+                const ticketChanged = newTicketCode !== currentTicketCode;
+                
+                if (ticketChanged) {
+                    currentTicketCode = newTicketCode;
+                    
+                    // Update ticket number with animation
+                    if (newTicketCode) {
+                        ticketNumberEl.innerHTML = `<span>${newTicketCode}</span>`;
+                        ticketNumberEl.classList.remove('empty');
+                        ticketNumberEl.classList.remove('flash');
+                        void ticketNumberEl.offsetWidth; // Trigger reflow
+                        ticketNumberEl.classList.add('flash');
+                        
+                        // Play sound
+                        playNotificationSound();
+                    } else {
+                        ticketNumberEl.innerHTML = '<span>—</span>';
+                        ticketNumberEl.classList.add('empty');
+                        ticketNumberEl.classList.remove('flash');
+                    }
+                }
+                
+                // Update next tickets
+                if (nextTicketsEl && data.nextTicketCodes) {
+                    if (data.nextTicketCodes.length > 0) {
+                        nextTicketsEl.innerHTML = data.nextTicketCodes
+                            .map(code => `<span class="next-ticket">${code}</span>`)
+                            .join('');
+                    } else {
+                        nextTicketsEl.innerHTML = '<span class="next-ticket">—</span>';
+                    }
+                }
+                
+                // Update waiting count
+                if (waitingCountEl) {
+                    waitingCountEl.innerHTML = `${data.waitingCount} i kø / in queue`;
+                }
+            }
+            
+            // Fetch status from API
+            async function fetchStatus() {
+                try {
+                    const response = await fetch(`/counter/${displayToken}/status`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        updateDisplay(data);
+                    }
+                } catch (error) {
+                    console.error('Error fetching status:', error);
+                }
+            }
+            
+            // Connect to ntfy for real-time updates
+            function connectNtfy() {
+                const ntfyUrl = `https://ntfy.knobo.no/queue-${queueId}/sse`;
+                console.log('Connecting to ntfy:', ntfyUrl);
+                
+                const eventSource = new EventSource(ntfyUrl);
+                
+                eventSource.onopen = function() {
+                    console.log('Connected to ntfy');
+                };
+                
+                eventSource.onerror = function(error) {
+                    console.error('ntfy connection error:', error);
+                    // Fallback to polling on error
+                    setTimeout(connectNtfy, 5000);
+                };
+                
+                eventSource.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        console.log('Received ntfy event:', data);
+                        
+                        // On any queue event, refresh status
+                        if (data.event === 'queue_status_changed' || 
+                            data.event === 'ticket_created' ||
+                            data.message?.includes('serving')) {
+                            fetchStatus();
+                        }
+                    } catch (e) {
+                        // Check for serving updates in plain text
+                        if (event.data && event.data.includes('serving')) {
+                            fetchStatus();
+                        }
+                    }
+                };
+                
+                // Cleanup on page unload
+                window.addEventListener('beforeunload', function() {
+                    eventSource.close();
+                });
+            }
+            
+            // Also listen on simple-queue topic for ticket updates
+            function connectQueueTopic() {
+                const ntfyUrl = `https://ntfy.knobo.no/simple-queue-${queueId}/sse`;
+                console.log('Connecting to queue topic:', ntfyUrl);
+                
+                const eventSource = new EventSource(ntfyUrl);
+                
+                eventSource.onmessage = function(event) {
+                    console.log('Queue topic event:', event.data);
+                    // Refresh on any ticket activity
+                    fetchStatus();
+                };
+                
+                eventSource.onerror = function(error) {
+                    console.error('Queue topic error:', error);
+                    setTimeout(connectQueueTopic, 5000);
+                };
+                
+                window.addEventListener('beforeunload', function() {
+                    eventSource.close();
+                });
+            }
+            
+            // Poll as backup every 10 seconds
+            function startPolling() {
+                setInterval(fetchStatus, 10000);
+            }
+            
+            // Initialize
+            function init() {
+                console.log('Initializing counter display for queue:', queueId);
+                
+                // Connect to real-time updates
+                connectNtfy();
+                connectQueueTopic();
+                
+                // Start polling as backup
+                startPolling();
+                
+                // Initial fetch
+                fetchStatus();
+            }
+            
+            // Start when DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+        })();
+        /*]]>*/
+    </script>
+</body>
+</html>

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <title th:text="#{home.title}">Simple Queue Service</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; text-align: center; }
+        .header { display: flex; justify-content: flex-end; margin-bottom: 20px; }
+        .language-selector a { text-decoration: none; font-size: 1.5em; margin-left: 5px; opacity: 0.6; }
+        .language-selector a.active { opacity: 1; }
+        .language-selector a:hover { opacity: 1; }
+        .btn { display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; margin: 10px; }
+        .btn-secondary { background-color: #6c757d; }
+        
+        /* Ticket list styles */
+        .tickets-section { margin-top: 40px; text-align: left; }
+        .tickets-section h3 { text-align: center; color: #333; margin-bottom: 20px; }
+        .ticket-list { list-style: none; padding: 0; margin: 0; }
+        .ticket-item { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            background: #f8f9fa; 
+            padding: 15px 20px; 
+            border-radius: 8px; 
+            margin-bottom: 10px;
+            border: 1px solid #e9ecef;
+        }
+        .ticket-info { flex: 1; }
+        .ticket-queue { font-weight: 600; color: #333; margin-bottom: 4px; }
+        .ticket-number { font-size: 1.4em; font-weight: bold; color: #007bff; }
+        .ticket-actions { display: flex; gap: 10px; align-items: center; }
+        .btn-small { padding: 8px 16px; font-size: 0.9em; margin: 0; }
+        .btn-danger { background-color: #dc3545; }
+        .btn-danger:hover { background-color: #c82333; }
+        .no-tickets { text-align: center; color: #666; padding: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div th:replace="~{fragments/language-selector :: selector}"></div>
+            <script th:replace="~{fragments/language-selector :: script}"></script>
+        </div>
+        
+        <h1 th:text="#{home.welcome}">Welcome to Simple Queue Service</h1>
+        <div th:if="${isAuthenticated}">
+            <p><span th:text="#{home.loggedInAs}">Logged in as</span>: <span th:text="${username}">User</span></p>
+            <a href="/dashboard" class="btn" th:text="#{home.goToDashboard}">Go to Dashboard</a>
+            <a href="/create-queue" class="btn" th:text="#{home.createQueue}">Create a Queue</a>
+            <form action="/logout" method="post" style="display: inline;">
+                <button type="submit" class="btn btn-secondary" th:text="#{home.logout}">Logout</button>
+            </form>
+        </div>
+        <div th:unless="${isAuthenticated}">
+            <p th:text="#{home.manageQueues}">Manage your queues efficiently.</p>
+            <a href="/oauth2/authorization/keycloak" class="btn" th:text="#{home.loginToCreate}">Login to Create Queue</a>
+        </div>
+        
+        <!-- My Tickets Section -->
+        <div id="tickets-section" class="tickets-section" style="display: none;">
+            <h3 th:text="#{home.myTickets}">Mine billetter</h3>
+            <ul id="ticket-list" class="ticket-list"></ul>
+        </div>
+    </div>
+    
+    <script th:inline="javascript">
+        (function() {
+            const OLD_STORAGE_KEY = 'simplequeue_ticket';
+            const STORAGE_KEY = 'simplequeue_tickets';
+            
+            // Migration: Convert old single ticket to array format
+            function migrateOldTicket() {
+                const oldData = localStorage.getItem(OLD_STORAGE_KEY);
+                if (oldData) {
+                    try {
+                        const old = JSON.parse(oldData);
+                        const migrated = {
+                            queueId: old.queueId || null,
+                            ticketId: String(old.ticketId),
+                            number: old.number || null,
+                            code: old.code,
+                            createdAt: old.savedAt || Date.now(),
+                            queueName: old.queueName
+                        };
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify([migrated]));
+                        localStorage.removeItem(OLD_STORAGE_KEY);
+                        console.log('[SimpleQueue] Migrated old ticket to array format');
+                    } catch (e) {
+                        console.warn('[SimpleQueue] Failed to migrate old ticket', e);
+                        localStorage.removeItem(OLD_STORAGE_KEY);
+                    }
+                }
+            }
+            
+            // Get existing tickets array
+            function getTickets() {
+                migrateOldTicket();
+                const data = localStorage.getItem(STORAGE_KEY);
+                if (!data) return [];
+                try {
+                    const parsed = JSON.parse(data);
+                    return Array.isArray(parsed) ? parsed : [];
+                } catch (e) {
+                    return [];
+                }
+            }
+            
+            // Save tickets array
+            function saveTickets(tickets) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(tickets));
+            }
+            
+            // Remove ticket by ticketId
+            function removeTicket(id) {
+                const tickets = getTickets();
+                const filtered = tickets.filter(t => String(t.ticketId) !== String(id));
+                saveTickets(filtered);
+                renderTickets();
+            }
+            
+            // I18n messages from Thymeleaf
+            const i18n = {
+                viewStatus: [[#{home.viewStatus}]],
+                remove: [[#{home.removeTicket}]],
+                confirmRemove: [[#{home.confirmRemove}]],
+                noTickets: [[#{home.noTickets}]]
+            };
+            
+            // Render tickets list
+            function renderTickets() {
+                const tickets = getTickets();
+                const section = document.getElementById('tickets-section');
+                const list = document.getElementById('ticket-list');
+                
+                // Sort by createdAt descending (newest first)
+                tickets.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                
+                if (tickets.length === 0) {
+                    section.style.display = 'none';
+                    return;
+                }
+                
+                section.style.display = 'block';
+                list.innerHTML = '';
+                
+                tickets.forEach(ticket => {
+                    const li = document.createElement('li');
+                    li.className = 'ticket-item';
+                    
+                    const ticketUrl = '/public/tickets/' + ticket.ticketId;
+                    
+                    li.innerHTML = `
+                        <div class="ticket-info">
+                            <div class="ticket-queue">${escapeHtml(ticket.queueName || 'Unknown Queue')}</div>
+                            <div class="ticket-number">${escapeHtml(ticket.code || '#' + ticket.number)}</div>
+                        </div>
+                        <div class="ticket-actions">
+                            <a href="${ticketUrl}" class="btn btn-small">${escapeHtml(i18n.viewStatus)}</a>
+                            <button class="btn btn-small btn-danger" data-ticket-id="${ticket.ticketId}">${escapeHtml(i18n.remove)}</button>
+                        </div>
+                    `;
+                    
+                    // Add remove handler
+                    const removeBtn = li.querySelector('button[data-ticket-id]');
+                    removeBtn.addEventListener('click', function() {
+                        if (confirm(i18n.confirmRemove)) {
+                            removeTicket(this.dataset.ticketId);
+                        }
+                    });
+                    
+                    list.appendChild(li);
+                });
+            }
+            
+            // Simple HTML escape
+            function escapeHtml(text) {
+                if (!text) return '';
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+            
+            // Initial render
+            renderTickets();
+        })();
+    </script>
+</body>
+</html>

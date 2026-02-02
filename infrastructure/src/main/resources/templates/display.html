@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <title th:text="${queue.name} + ' - Display Mode'">Queue Display</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; 
+            min-height: 100vh; 
+            display: flex; 
+            flex-direction: column;
+        }
+        
+        .header { 
+            text-align: center; 
+            padding: 20px 15px; 
+            background: rgba(0,0,0,0.2);
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+        }
+        
+        h1 { 
+            font-size: clamp(1.5em, 5vw, 3em); 
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        
+        .status-open { background: #28a745; }
+        .status-closed { background: #dc3545; }
+        
+        .main-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .qr-container {
+            background: white;
+            padding: clamp(20px, 5vw, 40px);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        .qr-container h2 {
+            color: #333;
+            font-size: clamp(1.2em, 4vw, 2em);
+            margin-bottom: 15px;
+        }
+        
+        .qr-code {
+            margin: 15px 0;
+            position: relative;
+        }
+        
+        .qr-code img {
+            max-width: 350px;
+            width: 100%;
+            height: auto;
+            border: 4px solid #667eea;
+            border-radius: 10px;
+            transition: opacity 0.3s ease;
+        }
+        
+        .qr-code.refreshing img {
+            opacity: 0.5;
+        }
+        
+        .qr-code .refresh-spinner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+        }
+        
+        .qr-code.refreshing .refresh-spinner {
+            display: block;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(102, 126, 234, 0.3);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Token Status Indicator */
+        .token-status {
+            margin: 15px 0;
+            padding: 12px 20px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-size: 0.95em;
+        }
+        
+        .token-status.static {
+            background: #e9ecef;
+            color: #495057;
+        }
+        
+        .token-status.valid {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .token-status.warning {
+            background: #fff3cd;
+            color: #856404;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        .token-status.expired {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .countdown-value {
+            font-weight: bold;
+            font-size: 1.2em;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        /* Progress Bar */
+        .progress-container {
+            margin: 15px 0;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            height: 8px;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 1s linear;
+            border-radius: 10px;
+        }
+        
+        .progress-bar.warning {
+            background: linear-gradient(90deg, #ffc107, #fd7e14);
+        }
+        
+        .progress-bar.critical {
+            background: linear-gradient(90deg, #dc3545, #c82333);
+            animation: progress-pulse 1s ease-in-out infinite;
+        }
+        
+        @keyframes progress-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        .instructions {
+            color: #666;
+            font-size: clamp(0.9em, 2.5vw, 1.2em);
+            margin-top: 15px;
+            line-height: 1.6;
+        }
+        
+        .kiosk-button-container {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 2px solid #eee;
+        }
+        
+        .kiosk-button {
+            display: inline-block;
+            padding: 15px 40px;
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: clamp(1em, 3vw, 1.3em);
+            font-weight: bold;
+            transition: background 0.3s, transform 0.2s;
+        }
+        
+        .kiosk-button:hover {
+            background: #218838;
+            transform: scale(1.02);
+        }
+        
+        .kiosk-button:active {
+            transform: scale(0.98);
+        }
+        
+        .kiosk-note {
+            color: #888;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+        
+        /* Welcome animation */
+        .welcome-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(40, 167, 69, 0.95);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .welcome-animation.show {
+            display: flex;
+            animation: fadeInOut 2s ease-in-out forwards;
+        }
+        
+        .welcome-text {
+            font-size: clamp(2em, 10vw, 5em);
+            font-weight: bold;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+            animation: welcomePulse 0.5s ease-in-out;
+        }
+        
+        @keyframes fadeInOut {
+            0% { opacity: 0; }
+            15% { opacity: 1; }
+            85% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        
+        @keyframes welcomePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 15px;
+            background: rgba(0,0,0,0.2);
+            font-size: 0.9em;
+            opacity: 0.7;
+        }
+        
+        /* Mobile optimizations */
+        @media (max-width: 480px) {
+            .header { padding: 15px 10px; }
+            .main-content { padding: 15px; }
+            .qr-container { padding: 15px; border-radius: 15px; }
+            .qr-code img { max-width: 280px; }
+            .token-status { padding: 10px 15px; flex-direction: column; gap: 5px; }
+            .kiosk-button { padding: 12px 30px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="welcome-animation" id="welcomeAnimation">
+        <div class="welcome-text">Velkommen! 🎉</div>
+    </div>
+
+    <div class="header">
+        <h1 th:text="${queue.name}">Queue Name</h1>
+        <div class="status-badge" 
+             th:classappend="${queue.open ? 'status-open' : 'status-closed'}"
+             th:text="${queue.open ? 'Åpen' : 'Stengt'}">
+            Status
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="qr-container">
+            <h2>Skann for å få billett</h2>
+            
+            <div class="qr-code" id="qrCodeContainer">
+                <img th:src="@{https://api.qrserver.com/v1/create-qr-code/?size=400x400&data={url}(url=${#httpServletRequest.scheme + '://' + #httpServletRequest.serverName + (#httpServletRequest.serverPort != 80 and #httpServletRequest.serverPort != 443 ? ':' + #httpServletRequest.serverPort : '') + joinUrl})}" 
+                     alt="QR Code" 
+                     id="qrCodeImage"/>
+                <div class="refresh-spinner">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+            
+            <!-- Token Status Indicator -->
+            <div id="tokenStatus" class="token-status" th:classappend="${isStaticMode ? 'static' : 'valid'}">
+                <span id="statusIcon">🔒</span>
+                <span id="statusText">
+                    <span th:if="${isStaticMode}">QR-kode er alltid gyldig</span>
+                    <span th:unless="${isStaticMode}">QR-kode oppdateres automatisk</span>
+                </span>
+                <span id="countdownValue" class="countdown-value" th:unless="${isStaticMode}"></span>
+            </div>
+            
+            <!-- Progress Bar (only for rotating tokens) -->
+            <div id="progressContainer" class="progress-container" th:style="${isStaticMode ? 'display:none' : ''}">
+                <div id="progressBar" class="progress-bar" style="width: 100%"></div>
+            </div>
+            
+            <div class="instructions">
+                📱 Skann QR-koden med mobilen din<br/>
+                🎫 Få din billett umiddelbart<br/>
+                ⏱️ Se ventetid i sanntid
+            </div>
+            
+            <!-- Kiosk button for queue owners to issue tickets on display -->
+            <div class="kiosk-button-container">
+                <a th:href="${kioskJoinUrl}" 
+                   class="kiosk-button"
+                   id="kioskButton">
+                    🎫 Ta billett her
+                </a>
+                <p class="kiosk-note">
+                    For kunder som ikke kan skanne QR-koden
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        Display Mode • SimpleQueue
+    </div>
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        (function() {
+            'use strict';
+            
+            // Configuration from server
+            const queueId = /*[[${queue.id}]]*/ '';
+            const displayToken = /*[[${queue.displayToken}]]*/ '';
+            const isStaticMode = /*[[${isStaticMode}]]*/ true;
+            const initialSecondsUntilExpiry = /*[[${tokenExpiresIn}]]*/ null;
+            const initialSecondsUntilRotation = /*[[${tokenRotatesIn}]]*/ null;
+            
+            // Configuration
+            const POLL_INTERVAL_MS = 30000; // Poll every 30 seconds as backup
+            const WARNING_THRESHOLD_SECONDS = 30;
+            const CRITICAL_THRESHOLD_SECONDS = 10;
+            
+            // State
+            let currentSecondsRemaining = initialSecondsUntilExpiry || initialSecondsUntilRotation;
+            let totalSeconds = currentSecondsRemaining;
+            let countdownInterval = null;
+            let pollInterval = null;
+            let isRefreshing = false;
+            
+            // DOM elements
+            const qrCodeContainer = document.getElementById('qrCodeContainer');
+            const qrCodeImage = document.getElementById('qrCodeImage');
+            const tokenStatus = document.getElementById('tokenStatus');
+            const statusIcon = document.getElementById('statusIcon');
+            const statusText = document.getElementById('statusText');
+            const countdownValue = document.getElementById('countdownValue');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const kioskButton = document.getElementById('kioskButton');
+            const welcomeAnimation = document.getElementById('welcomeAnimation');
+            
+            // Format time for display
+            function formatTime(seconds) {
+                if (seconds === null || seconds === undefined) return '';
+                
+                seconds = Math.max(0, Math.floor(seconds));
+                
+                if (seconds >= 3600) {
+                    const hours = Math.floor(seconds / 3600);
+                    const mins = Math.floor((seconds % 3600) / 60);
+                    return `${hours}t ${mins}m`;
+                } else if (seconds >= 60) {
+                    const mins = Math.floor(seconds / 60);
+                    const secs = seconds % 60;
+                    return `${mins}:${secs.toString().padStart(2, '0')}`;
+                } else {
+                    return `${seconds}s`;
+                }
+            }
+            
+            // Update the status display
+            function updateStatusDisplay() {
+                if (isStaticMode) {
+                    tokenStatus.className = 'token-status static';
+                    statusIcon.textContent = '🔒';
+                    statusText.textContent = 'QR-kode er alltid gyldig';
+                    countdownValue.textContent = '';
+                    progressContainer.style.display = 'none';
+                    return;
+                }
+                
+                const seconds = currentSecondsRemaining;
+                countdownValue.textContent = formatTime(seconds);
+                
+                // Update progress bar
+                const progress = totalSeconds > 0 ? (seconds / totalSeconds) * 100 : 0;
+                progressBar.style.width = `${Math.max(0, progress)}%`;
+                
+                // Update status based on time remaining
+                if (seconds <= 0) {
+                    tokenStatus.className = 'token-status expired';
+                    statusIcon.textContent = '🔄';
+                    statusText.textContent = 'Oppdaterer QR-kode...';
+                    progressBar.className = 'progress-bar critical';
+                } else if (seconds <= CRITICAL_THRESHOLD_SECONDS) {
+                    tokenStatus.className = 'token-status warning';
+                    statusIcon.textContent = '⚡';
+                    statusText.textContent = 'Ny QR-kode om';
+                    progressBar.className = 'progress-bar critical';
+                } else if (seconds <= WARNING_THRESHOLD_SECONDS) {
+                    tokenStatus.className = 'token-status warning';
+                    statusIcon.textContent = '⏳';
+                    statusText.textContent = 'Ny QR-kode om';
+                    progressBar.className = 'progress-bar warning';
+                } else {
+                    tokenStatus.className = 'token-status valid';
+                    statusIcon.textContent = '✓';
+                    statusText.textContent = 'Gyldig i';
+                    progressBar.className = 'progress-bar';
+                }
+            }
+            
+            // Build full QR URL
+            function buildQrUrl(joinUrl) {
+                const origin = window.location.origin;
+                return `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(origin + joinUrl)}`;
+            }
+            
+            // Refresh QR code
+            function refreshQrCode(newJoinUrl, newKioskUrl) {
+                if (isRefreshing) return;
+                isRefreshing = true;
+                
+                qrCodeContainer.classList.add('refreshing');
+                
+                const newQrUrl = buildQrUrl(newJoinUrl);
+                
+                // Preload the new image
+                const tempImage = new Image();
+                tempImage.onload = function() {
+                    qrCodeImage.src = newQrUrl;
+                    kioskButton.href = newKioskUrl;
+                    qrCodeContainer.classList.remove('refreshing');
+                    isRefreshing = false;
+                    console.log('QR code refreshed successfully');
+                };
+                tempImage.onerror = function() {
+                    qrCodeContainer.classList.remove('refreshing');
+                    isRefreshing = false;
+                    console.error('Failed to load new QR code');
+                };
+                tempImage.src = newQrUrl;
+            }
+            
+            // Fetch token status from server
+            async function fetchTokenStatus() {
+                try {
+                    const response = await fetch(`/display/${displayToken}/token/status`);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    console.log('Token status:', data);
+                    
+                    // Update timing
+                    const newSeconds = data.secondsUntilExpiry || data.secondsUntilRotation;
+                    if (newSeconds !== null && newSeconds !== undefined) {
+                        // If server time is significantly different, update
+                        if (Math.abs(newSeconds - currentSecondsRemaining) > 5) {
+                            currentSecondsRemaining = newSeconds;
+                            totalSeconds = Math.max(totalSeconds, newSeconds);
+                        }
+                    }
+                    
+                    // Check if token changed - need to update QR
+                    const currentQrUrl = qrCodeImage.src;
+                    const expectedQrUrl = buildQrUrl(data.joinUrl);
+                    
+                    if (!currentQrUrl.includes(encodeURIComponent(data.joinUrl))) {
+                        console.log('Token changed, updating QR code');
+                        refreshQrCode(data.joinUrl, data.kioskJoinUrl);
+                        
+                        // Reset timer
+                        currentSecondsRemaining = newSeconds;
+                        totalSeconds = newSeconds;
+                    }
+                    
+                    updateStatusDisplay();
+                    
+                } catch (error) {
+                    console.error('Error fetching token status:', error);
+                }
+            }
+            
+            // Start countdown timer
+            function startCountdown() {
+                if (isStaticMode) return;
+                
+                countdownInterval = setInterval(function() {
+                    if (currentSecondsRemaining !== null) {
+                        currentSecondsRemaining = Math.max(0, currentSecondsRemaining - 1);
+                        updateStatusDisplay();
+                        
+                        // Trigger refresh when expired
+                        if (currentSecondsRemaining <= 0 && !isRefreshing) {
+                            fetchTokenStatus();
+                        }
+                    }
+                }, 1000);
+            }
+            
+            // Start polling as backup
+            function startPolling() {
+                if (isStaticMode) return;
+                
+                pollInterval = setInterval(fetchTokenStatus, POLL_INTERVAL_MS);
+            }
+            
+            // Update queue status from ntfy
+            function updateQueueStatus(isOpen) {
+                const badge = document.querySelector('.status-badge');
+                if (isOpen) {
+                    badge.classList.remove('status-closed');
+                    badge.classList.add('status-open');
+                    badge.textContent = 'Åpen';
+                } else {
+                    badge.classList.remove('status-open');
+                    badge.classList.add('status-closed');
+                    badge.textContent = 'Stengt';
+                }
+            }
+            
+            // Show welcome animation
+            function showWelcomeAnimation() {
+                welcomeAnimation.classList.add('show');
+                
+                setTimeout(function() {
+                    welcomeAnimation.classList.remove('show');
+                }, 2000);
+            }
+            
+            // Connect to ntfy for real-time updates
+            function connectNtfy() {
+                const ntfyUrl = `https://ntfy.knobo.no/queue-${queueId}/sse`;
+                console.log('Connecting to ntfy:', ntfyUrl);
+                
+                const eventSource = new EventSource(ntfyUrl);
+                
+                eventSource.onopen = function() {
+                    console.log('Connected to ntfy');
+                };
+                
+                eventSource.onerror = function(error) {
+                    console.error('ntfy connection error:', error);
+                };
+                
+                eventSource.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        console.log('Received ntfy event:', data);
+                        
+                        if (data.event === 'token_rotated') {
+                            console.log('Token rotated via ntfy, fetching new token');
+                            fetchTokenStatus();
+                        } else if (data.event === 'queue_status_changed') {
+                            console.log('Queue status changed:', data.open);
+                            updateQueueStatus(data.open);
+                        } else if (data.event === 'ticket_created') {
+                            console.log('New ticket created');
+                            showWelcomeAnimation();
+                        }
+                    } catch (e) {
+                        // ntfy kan sende keepalive meldinger som ikke er JSON
+                        if (event.data && event.data.trim()) {
+                            console.log('Non-JSON ntfy message:', event.data);
+                        }
+                    }
+                };
+                
+                // Cleanup on page unload
+                window.addEventListener('beforeunload', function() {
+                    eventSource.close();
+                });
+            }
+            
+            // Initialize
+            function init() {
+                console.log('Initializing display with:', {
+                    queueId,
+                    displayToken,
+                    isStaticMode,
+                    initialSecondsUntilExpiry,
+                    initialSecondsUntilRotation
+                });
+                
+                // Initial status display
+                updateStatusDisplay();
+                
+                // Start countdown and polling for dynamic tokens
+                if (!isStaticMode) {
+                    startCountdown();
+                    startPolling();
+                    
+                    // Initial fetch to ensure we have latest token
+                    fetchTokenStatus();
+                }
+                
+                // Connect to ntfy for real-time updates
+                connectNtfy();
+            }
+            
+            // Start when DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+        })();
+        /*]]>*/
+    </script>
+</body>
+</html>

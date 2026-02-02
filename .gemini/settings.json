@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "chrome-devtools": {
+      "command": "node",
+      "args": [
+        "/home/knobo/prog/simple/frontend/node_modules/.bin/chrome-devtools-mcp"
+      ]
+    }
+  }
+}

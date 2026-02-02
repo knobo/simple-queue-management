@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <title th:text="#{ticket.status.title} + ' - Simple Queue'">Your Ticket - Simple Queue</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- No auto-refresh meta tag, using ntfy for updates -->
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 20px; background-color: #f0f2f5; color: #333; text-align: center; }
+        .language-selector { position: absolute; top: 10px; right: 20px; }
+        .language-selector a { text-decoration: none; font-size: 1.5em; margin-left: 5px; opacity: 0.6; }
+        .language-selector a.active { opacity: 1; }
+        .language-selector a:hover { opacity: 1; }
+        .ticket-card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 400px; margin: 20px auto; }
+        .queue-name { font-size: 1.2em; color: #666; margin-bottom: 10px; }
+        .number { font-size: 5em; font-weight: 800; color: #007bff; margin: 10px 0; line-height: 1; }
+        .status-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-weight: bold; background: #eee; color: #555; margin-bottom: 20px; }
+        .status-badge.WAITING { background: #ffc107; color: #333; }
+        .status-badge.CALLED { background: #28a745; color: white; animation: pulse 2s infinite; }
+        .status-badge.COMPLETED { background: #6c757d; color: white; }
+
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 30px; text-align: left; }
+        .info-item { background: #f8f9fa; padding: 15px; border-radius: 8px; }
+        .info-label { font-size: 0.8em; color: #888; display: block; margin-bottom: 5px; }
+        .info-value { font-weight: bold; font-size: 1.2em; }
+
+        .ntfy-link { display: block; margin-top: 30px; font-size: 0.9em; color: #007bff; text-decoration: none; border: 1px solid #007bff; padding: 10px; border-radius: 5px; }
+
+        /* Kiosk mode styles */
+        .kiosk-section { margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee; }
+        .close-button {
+            display: block;
+            width: 100%;
+            padding: 18px;
+            font-size: 1.3em;
+            font-weight: bold;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 15px;
+            transition: background 0.3s ease;
+            touch-action: manipulation;
+        }
+        .close-button:hover { background: #218838; }
+        .close-button:active { background: #1e7e34; transform: scale(0.98); }
+        .auto-close-countdown {
+            font-size: 0.95em;
+            color: #666;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+        .auto-close-countdown.paused {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffc107;
+        }
+        .auto-close-countdown.paused .countdown-text {
+            display: none;
+        }
+        .auto-close-countdown .paused-text {
+            display: none;
+        }
+        .auto-close-countdown.paused .paused-text {
+            display: inline;
+        }
+        @keyframes pausePulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        .auto-close-countdown.paused {
+            animation: pausePulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+    </style>
+</head>
+<body>
+    <div th:replace="~{fragments/language-selector :: selector}"></div>
+            <script th:replace="~{fragments/language-selector :: script}"></script>
+
+    <div class="ticket-card">
+        <div class="queue-name" th:text="${queue.name}">Queue Name</div>
+
+        <div class="number" th:text="${ticket.code}">A-105</div>
+        <div th:class="'status-badge ' + ${ticket.status}" th:text="${ticket.status}">WAITING</div>
+
+        <div th:if="${ticket.name}" style="font-size: 1.2em; margin-bottom: 15px;" th:text="${ticket.name}">John Doe</div>
+
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label" th:text="#{ticket.status.now_serving}">Now Serving</span>
+                <span class="info-value" id="nowServing" th:text="${lastCalled}">102</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label" th:text="#{ticket.status.est_wait}">Est. Wait</span>
+                <span class="info-value" id="estWait">-- min</span>
+            </div>
+        </div>
+
+        <div id="turn-alert" style="display: none; background: #28a745; color: white; padding: 15px; border-radius: 8px; margin-top: 20px; font-weight: bold;"
+             th:attr="data-message=#{ticket.status.your_turn}">
+            <span th:text="#{ticket.status.your_turn}">IT'S YOUR TURN! PLEASE PROCEED TO THE COUNTER.</span>
+        </div>
+
+        <a th:href="'ntfy://ntfy.knobo.no/' + ${queueTopic}" class="ntfy-link">
+            <span th:text="#{ticket.status.open_ntfy}">Open in Ntfy App 🔔</span>
+        </a>
+
+        <div style="margin-top: 15px; font-size: 0.9em;">
+             <a th:href="'https://ntfy.knobo.no/' + ${queueTopic}" target="_blank" style="color: #666; text-decoration: underline;">
+                <span th:text="#{ticket.status.view_browser}">Or view notifications in browser</span>
+            </a>
+        </div>
+
+        <div class="email-section" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+            <form th:if="${emailSent == null || !emailSent}" th:action="@{/public/tickets/{id}/send-email(id=${ticket.id})}" method="post">
+                <label style="display: block; margin-bottom: 10px; color: #666;">
+                    📧 <span th:text="#{ticket.email.label}">Send billett til epost</span>
+                </label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="email" name="email" required th:placeholder="#{ticket.email.placeholder}"
+                           th:value="${ticket.guestEmail}"
+                           style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                    <button type="submit" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                        <span th:text="#{ticket.email.button}">Send</span> ✉️
+                    </button>
+                </div>
+            </form>
+            <div th:if="${emailSent}" style="color: #28a745; padding: 10px; background: #d4edda; border-radius: 5px;">
+                ✅ <span th:text="#{ticket.email.success}">Billett sendt til din epost!</span>
+            </div>
+        </div>
+
+        <!-- Kiosk Mode Section -->
+        <div class="kiosk-section" th:if="${autoCloseSeconds != null && autoCloseSeconds > 0}">
+            <button class="close-button" onclick="window.close()">
+                <span th:text="#{kiosk.closeButton}">Done - Close Window</span>
+            </button>
+            <div class="auto-close-countdown" id="countdown-message">
+                <span class="countdown-text" th:text="#{kiosk.autoCloseCountdown(${autoCloseSeconds})}">Window will close automatically in 5 seconds...</span>
+                <span class="paused-text">⏸️ <span th:text="#{kiosk.paused}">Paused - finish your input</span></span>
+            </div>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        const ticketId = [[${ticket.id}]];
+        const ticketNumber = [[${ticket.number}]];
+        const ticketCode = [[${ticket.code}]];
+        const queueName = [[${queue.name}]];
+        const avgTime = [[${avgTime}]]; // in seconds
+        const queueTopic = [[${queueTopic}]]; // queue topic
+        const myStatus = [[${ticket.status}]];
+        const autoCloseSeconds = [[${autoCloseSeconds}]];
+
+        // === LocalStorage: Remember tickets for anonymous users ===
+        (function() {
+            const OLD_STORAGE_KEY = 'simplequeue_ticket';
+            const STORAGE_KEY = 'simplequeue_tickets';
+            const queueId = [[${queue.id}]];
+            
+            // Check if we're in kiosk mode (autoCloseSeconds > 0 means kiosk)
+            const isKioskMode = autoCloseSeconds && autoCloseSeconds > 0;
+            
+            if (isKioskMode) {
+                console.log('[SimpleQueue] Kiosk mode - not saving to localStorage');
+                return;
+            }
+            
+            // Migration: Convert old single ticket to array format
+            function migrateOldTicket() {
+                const oldData = localStorage.getItem(OLD_STORAGE_KEY);
+                if (oldData) {
+                    try {
+                        const old = JSON.parse(oldData);
+                        const migrated = {
+                            queueId: old.queueId || null,
+                            ticketId: String(old.ticketId),
+                            number: old.number || null,
+                            code: old.code,
+                            createdAt: old.savedAt || Date.now(),
+                            queueName: old.queueName
+                        };
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify([migrated]));
+                        localStorage.removeItem(OLD_STORAGE_KEY);
+                        console.log('[SimpleQueue] Migrated old ticket to array format');
+                    } catch (e) {
+                        console.warn('[SimpleQueue] Failed to migrate old ticket', e);
+                        localStorage.removeItem(OLD_STORAGE_KEY);
+                    }
+                }
+            }
+            
+            // Get existing tickets array
+            function getTickets() {
+                migrateOldTicket();
+                const data = localStorage.getItem(STORAGE_KEY);
+                if (!data) return [];
+                try {
+                    const parsed = JSON.parse(data);
+                    return Array.isArray(parsed) ? parsed : [];
+                } catch (e) {
+                    return [];
+                }
+            }
+            
+            // Save tickets array
+            function saveTickets(tickets) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(tickets));
+            }
+            
+            // Remove ticket by ticketId
+            function removeTicket(id) {
+                const tickets = getTickets();
+                const filtered = tickets.filter(t => String(t.ticketId) !== String(id));
+                saveTickets(filtered);
+                return filtered;
+            }
+            
+            // Add or update ticket (dedup by ticketId)
+            function upsertTicket(ticketData) {
+                let tickets = getTickets();
+                const idx = tickets.findIndex(t => String(t.ticketId) === String(ticketData.ticketId));
+                if (idx >= 0) {
+                    tickets[idx] = ticketData;
+                } else {
+                    tickets.push(ticketData);
+                }
+                saveTickets(tickets);
+                return tickets;
+            }
+            
+            // If ticket is COMPLETED or CANCELLED, remove from localStorage
+            if (myStatus === 'COMPLETED' || myStatus === 'CANCELLED') {
+                removeTicket(ticketId);
+                console.log('[SimpleQueue] Ticket finished, removed from localStorage');
+            } else {
+                // Save active ticket info
+                const ticketData = {
+                    queueId: String(queueId),
+                    ticketId: String(ticketId),
+                    number: ticketNumber,
+                    code: ticketCode,
+                    createdAt: Date.now(),
+                    queueName: queueName
+                };
+                upsertTicket(ticketData);
+                console.log('[SimpleQueue] Saved ticket to localStorage:', ticketData);
+            }
+        })();
+
+        function updateEst(lastCalled) {
+            const diff = ticketNumber - lastCalled;
+            if (diff <= 0) {
+                document.getElementById('estWait').innerText = "0 min";
+                if (myStatus === 'WAITING' || myStatus === 'CALLED') {
+                     // likely called
+                }
+                return;
+            }
+            const estSeconds = diff * avgTime;
+            const estMinutes = Math.ceil(estSeconds / 60);
+            document.getElementById('estWait').innerText = estMinutes + " min";
+        }
+
+        // Initial Calculation
+        let currentLastCalled = parseInt(document.getElementById('nowServing').innerText) || 0;
+        updateEst(currentLastCalled);
+
+        if (myStatus === 'CALLED') {
+            document.getElementById('turn-alert').style.display = 'block';
+        }
+
+        // Listen to Ntfy
+        const eventSource = new EventSource('https://ntfy.knobo.no/' + queueTopic + '/sse');
+        eventSource.onmessage = (event) => {
+            console.log("Ntfy update:", event.data);
+            try {
+                const data = JSON.parse(event.data);
+                // Look for JSON payload from backend
+                // Backend sends: {"status":"serving", "number":105}
+                // or just raw text message might be sent sometimes?
+                // `event.data` from ntfy wraps the actual message in `message` field if using streaming?
+                // Wait, ntfy SSE returns JSON object: { id, time, event, topic, message, ... }
+                // Content is in `data.message`.
+
+                if (data.event === 'message') {
+                     const payload = JSON.parse(data.message);
+                     if (payload.status === 'serving') {
+                         const servingNum = payload.number;
+                         document.getElementById('nowServing').innerText = servingNum;
+                         currentLastCalled = servingNum;
+                         updateEst(servingNum);
+
+                         if (servingNum === ticketNumber) {
+                             document.getElementById('turn-alert').style.display = 'block';
+                             document.querySelector('.status-badge').innerText = 'CALLED';
+                             document.querySelector('.status-badge').classList.remove('WAITING');
+                             document.querySelector('.status-badge').classList.add('CALLED');
+
+                             // Vibrate or sound?
+                             if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
+                         }
+                     }
+                }
+            } catch (e) {
+                console.warn("Failed to parse ntfy message", e);
+            }
+        };
+
+        // === Kiosk Mode: Smart Auto-close countdown ===
+        if (autoCloseSeconds && autoCloseSeconds > 0) {
+            let remainingSeconds = autoCloseSeconds;
+            let isPaused = false;
+            const EXTEND_SECONDS = 5;
+            const countdownElement = document.getElementById('countdown-message');
+            const countdownTextElement = countdownElement.querySelector('.countdown-text');
+            
+            // Get the i18n message template (already rendered by Thymeleaf)
+            const messageTemplate = countdownTextElement.textContent;
+            
+            // Update the countdown display
+            function updateCountdownUI() {
+                const updatedMessage = messageTemplate.replace(/\d+/, remainingSeconds);
+                countdownTextElement.textContent = updatedMessage;
+            }
+            
+            // Extend countdown on user interaction
+            function extendCountdown() {
+                if (!isPaused) {
+                    remainingSeconds = Math.min(remainingSeconds + EXTEND_SECONDS, autoCloseSeconds + 30);
+                    updateCountdownUI();
+                }
+            }
+            
+            // Pause/unpause countdown
+            function setPaused(paused) {
+                isPaused = paused;
+                if (paused) {
+                    countdownElement.classList.add('paused');
+                } else {
+                    countdownElement.classList.remove('paused');
+                }
+            }
+            
+            // Extend on interaction events
+            ['click', 'touchstart', 'mousemove'].forEach(eventType => {
+                document.addEventListener(eventType, extendCountdown, { passive: true });
+            });
+            
+            // Pause when input fields are focused
+            document.querySelectorAll('input, textarea, select').forEach(el => {
+                el.addEventListener('focus', () => setPaused(true));
+                el.addEventListener('blur', () => setPaused(false));
+            });
+            
+            // Main countdown interval
+            const countdownInterval = setInterval(() => {
+                if (!isPaused && remainingSeconds > 0) {
+                    remainingSeconds--;
+                    updateCountdownUI();
+                }
+                
+                if (remainingSeconds <= 0) {
+                    clearInterval(countdownInterval);
+                    window.close();
+                    // Fallback if window.close() doesn't work (window wasn't opened by JS)
+                    window.location.href = '/';
+                }
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

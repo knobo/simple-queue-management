@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <title th:text="#{portal.history.title} + ' - Simple Queue'">Ticket History - Simple Queue</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            padding: 20px; 
+            background-color: #f8f9fa; 
+            color: #333; 
+            margin: 0;
+        }
+        .container { max-width: 600px; margin: 0 auto; }
+        
+        .header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 20px;
+            padding: 10px 0;
+        }
+        .header h1 { margin: 0; font-size: 1.3em; color: #222; display: flex; align-items: center; gap: 10px; }
+        .back-link { 
+            text-decoration: none; 
+            color: #666; 
+            font-size: 1.2em;
+        }
+        .back-link:hover { color: #333; }
+        
+        .language-selector a { 
+            text-decoration: none; 
+            font-size: 1.3em; 
+            margin-left: 5px; 
+            opacity: 0.6; 
+        }
+        .language-selector a.active { opacity: 1; }
+        .language-selector a:hover { opacity: 1; }
+        
+        /* History List */
+        .history-list { 
+            background: white; 
+            border-radius: 12px; 
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .history-item { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            padding: 15px 20px; 
+            border-bottom: 1px solid #f0f0f0;
+            text-decoration: none;
+            color: inherit;
+            transition: background 0.2s;
+        }
+        .history-item:hover { background: #f8f9fa; }
+        .history-item:last-child { border-bottom: none; }
+        
+        .history-main { flex: 1; }
+        .history-queue { font-weight: 500; color: #333; }
+        .history-meta { 
+            font-size: 0.85em; 
+            color: #888; 
+            margin-top: 3px;
+        }
+        .history-status { 
+            font-size: 0.8em; 
+            padding: 4px 10px; 
+            border-radius: 12px;
+            font-weight: 500;
+        }
+        .history-status.COMPLETED { background: #d4edda; color: #155724; }
+        .history-status.CANCELLED { background: #f8d7da; color: #721c24; }
+        
+        .empty-history { 
+            text-align: center; 
+            padding: 40px; 
+            color: #888;
+        }
+        .empty-history .icon { font-size: 3em; margin-bottom: 15px; opacity: 0.4; }
+        
+        /* Pagination */
+        .pagination { 
+            display: flex; 
+            justify-content: center; 
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+            padding: 15px;
+        }
+        .pagination-info {
+            color: #666;
+            font-size: 0.9em;
+        }
+        .pagination-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 16px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            color: #333;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .pagination-btn:hover:not(.disabled) {
+            background: #f0f0f0;
+            border-color: #ccc;
+        }
+        .pagination-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        
+        /* Summary */
+        .summary {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .summary-stat {
+            text-align: center;
+        }
+        .summary-value {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: #333;
+        }
+        .summary-label {
+            font-size: 0.8em;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>
+                <a th:href="@{/portal}" class="back-link">←</a>
+                <span th:text="#{portal.history.title}">Ticket History</span>
+            </h1>
+            <div th:replace="~{fragments/language-selector :: selector}"></div>
+            <script th:replace="~{fragments/language-selector :: script}"></script>
+        </div>
+        
+        <!-- Summary -->
+        <div class="summary" th:if="${historyPage.totalItems > 0}">
+            <div class="summary-stat">
+                <div class="summary-value" th:text="${historyPage.totalItems}">47</div>
+                <div class="summary-label" th:text="#{portal.history.total_tickets}">Total Tickets</div>
+            </div>
+            <div class="summary-stat">
+                <div class="summary-value" th:text="${historyPage.page + 1} + '/' + ${historyPage.totalPages}">1/3</div>
+                <div class="summary-label" th:text="#{portal.history.page}">Page</div>
+            </div>
+        </div>
+        
+        <!-- History List -->
+        <div class="history-list" th:if="${!historyPage.items.empty}">
+            <a th:each="item : ${historyPage.items}" th:href="@{/public/tickets/{id}(id=${item.ticketId})}" class="history-item">
+                <div class="history-main">
+                    <div class="history-queue" th:text="${item.queueName}">Vinmonopolet Sentrum</div>
+                    <div class="history-meta">
+                        <span th:text="${item.ticketCode}">B-017</span> · 
+                        <span th:text="${#temporals.format(item.issuedAt, 'd. MMM yyyy')}">28. jan 2025</span>
+                        <span th:if="${item.waitTimeMinutes != null}"> · <span th:text="${item.waitTimeMinutes} + ' min'">22 min</span></span>
+                    </div>
+                </div>
+                <span th:class="'history-status ' + ${item.status.name()}" 
+                      th:text="${item.status.name() == 'COMPLETED' ? #{portal.status.completed} : #{portal.status.cancelled}}">Completed</span>
+            </a>
+        </div>
+        
+        <!-- Empty State -->
+        <div th:if="${historyPage.items.empty}" class="history-list">
+            <div class="empty-history">
+                <div class="icon">📋</div>
+                <p th:text="#{portal.no_history}">No ticket history</p>
+            </div>
+        </div>
+        
+        <!-- Pagination -->
+        <div class="pagination" th:if="${historyPage.totalPages > 1}">
+            <a th:href="@{/portal/history(page=${historyPage.page - 1})}" 
+               th:class="'pagination-btn' + (${!historyPage.hasPrevious} ? ' disabled' : '')"
+               th:text="#{portal.history.previous}">← Previous</a>
+            
+            <span class="pagination-info" 
+                  th:text="#{portal.history.page_info(${historyPage.page + 1}, ${historyPage.totalPages})}">
+                Page 1 of 3
+            </span>
+            
+            <a th:href="@{/portal/history(page=${historyPage.page + 1})}" 
+               th:class="'pagination-btn' + (${!historyPage.hasNext} ? ' disabled' : '')"
+               th:text="#{portal.history.next}">Next →</a>
+        </div>
+    </div>
+</body>
+</html>

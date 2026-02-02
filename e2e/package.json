@@ -1,0 +1,22 @@
+{
+  "name": "simple-queue-e2e",
+  "version": "1.0.0",
+  "description": "End-to-end tests for Simple Queue using Playwright",
+  "scripts": {
+    "test": "playwright test",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    "test:report": "playwright show-report",
+    "test:tier-limits": "playwright test tier-limits",
+    "test:landing": "playwright test landing"
+  },
+  "keywords": ["e2e", "playwright", "testing"],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.52.0",
+    "typescript": "^5.8.3"
+  }
+}

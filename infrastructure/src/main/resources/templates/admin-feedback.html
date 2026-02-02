@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <title>Admin - Feedback - Simple Queue</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            padding: 20px;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .card {
+            background: white;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border: 1px solid #eaeaea;
+        }
+        .card h3 {
+            margin-top: 0;
+            font-size: 1.2em;
+            color: #222;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .btn {
+            padding: 8px 16px;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9em;
+            display: inline-block;
+            transition: opacity 0.2s;
+        }
+        .btn:hover {
+            opacity: 0.9;
+        }
+        .btn-primary {
+            background-color: #007bff;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+        }
+        .btn-outline {
+            background: white;
+            border: 2px solid #007bff;
+            color: #007bff;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #eaeaea;
+        }
+        .stat-card .number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stat-card .label {
+            font-size: 0.85em;
+            color: #666;
+        }
+        .filters {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .filter-group label {
+            font-size: 0.85em;
+            font-weight: 600;
+            color: #444;
+        }
+        .filter-group select,
+        .filter-group input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #444;
+        }
+        tr:hover {
+            background: #f8f9ff;
+        }
+        .type-icon {
+            font-size: 1.3em;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+        .status-NEW {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status-IN_PROGRESS {
+            background: #cce5ff;
+            color: #004085;
+        }
+        .status-RESOLVED {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status-CLOSED {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+        .tier-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75em;
+            background: #e9ecef;
+            color: #495057;
+        }
+        .tier-PRO {
+            background: #cce5ff;
+            color: #004085;
+        }
+        .tier-STARTER {
+            background: #d4edda;
+            color: #155724;
+        }
+        .tier-ENTERPRISE {
+            background: #f5c6cb;
+            color: #721c24;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .clickable-row {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>Admin - Feedback</h1>
+        <a href="/dashboard" class="btn btn-outline">← Dashboard</a>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="number" th:text="${stats.total}">0</div>
+            <div class="label">Totalt</div>
+        </div>
+        <div class="stat-card">
+            <div class="number" th:text="${stats.byStatus.get(T(com.example.simplequeue.domain.model.FeedbackStatus).NEW)}">0</div>
+            <div class="label">Nye</div>
+        </div>
+        <div class="stat-card">
+            <div class="number" th:text="${stats.byStatus.get(T(com.example.simplequeue.domain.model.FeedbackStatus).IN_PROGRESS)}">0</div>
+            <div class="label">Under behandling</div>
+        </div>
+        <div class="stat-card">
+            <div class="number" th:text="${stats.byType.get(T(com.example.simplequeue.domain.model.FeedbackType).BUG)}">0</div>
+            <div class="label">🐛 Bugs</div>
+        </div>
+        <div class="stat-card">
+            <div class="number" th:text="${stats.byType.get(T(com.example.simplequeue.domain.model.FeedbackType).FEATURE)}">0</div>
+            <div class="label">💡 Features</div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card">
+        <h3>Filtre</h3>
+        <form action="/admin/feedback" method="get" class="filters">
+            <div class="filter-group">
+                <label for="type">Type</label>
+                <select name="type" id="type">
+                    <option value="">Alle typer</option>
+                    <option th:each="t : ${feedbackTypes}"
+                            th:value="${t.name()}"
+                            th:text="${t.name()}"
+                            th:selected="${selectedType == t.name()}">TYPE</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="status">Status</label>
+                <select name="status" id="status">
+                    <option value="">Alle statuser</option>
+                    <option th:each="s : ${feedbackStatuses}"
+                            th:value="${s.name()}"
+                            th:text="${s.name()}"
+                            th:selected="${selectedStatus == s.name()}">STATUS</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="category">Kategori</label>
+                <select name="category" id="category">
+                    <option value="">Alle kategorier</option>
+                    <option th:each="c : ${feedbackCategories}"
+                            th:value="${c.name()}"
+                            th:text="${c.name()}"
+                            th:selected="${selectedCategory == c.name()}">CATEGORY</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="search">Søk</label>
+                <input type="text" name="search" id="search"
+                       placeholder="Søk i tittel/beskrivelse..."
+                       th:value="${searchQuery}">
+            </div>
+            <button type="submit" class="btn btn-primary">Filtrer</button>
+            <a href="/admin/feedback" class="btn btn-secondary">Nullstill</a>
+        </form>
+    </div>
+
+    <!-- Feedback List -->
+    <div class="card">
+        <h3>Tilbakemeldinger (<span th:text="${feedbackList.size()}">0</span>)</h3>
+
+        <div th:if="${feedbackList.empty}" class="empty-state">
+            <p>Ingen tilbakemeldinger funnet med valgte filtre.</p>
+        </div>
+
+        <table th:unless="${feedbackList.empty}">
+            <thead>
+            <tr>
+                <th>Type</th>
+                <th>Tittel</th>
+                <th>Kategori</th>
+                <th>Bruker</th>
+                <th>Plan</th>
+                <th>Status</th>
+                <th>Dato</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="feedback : ${feedbackList}"
+                class="clickable-row"
+                th:onclick="'window.location=\'/admin/feedback/' + ${feedback.id} + '\''">
+                <td class="type-icon">
+                    <span th:if="${feedback.type.name() == 'BUG'}">🐛</span>
+                    <span th:if="${feedback.type.name() == 'FEATURE'}">💡</span>
+                    <span th:if="${feedback.type.name() == 'GENERAL'}">💬</span>
+                </td>
+                <td th:text="${feedback.title}">Tittel</td>
+                <td th:text="${feedback.category.name()}">Kategori</td>
+                <td th:text="${feedback.userEmail}">email@example.com</td>
+                <td>
+                    <span class="tier-badge"
+                          th:classappend="'tier-' + ${feedback.subscriptionTier}"
+                          th:text="${feedback.subscriptionTier}">FREE</span>
+                </td>
+                <td>
+                    <span class="status-badge"
+                          th:classappend="'status-' + ${feedback.status.name()}"
+                          th:text="${feedback.status.name()}">STATUS</span>
+                </td>
+                <td th:text="${#temporals.format(feedback.createdAt, 'd. MMM yyyy')}">1. jan 2025</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>

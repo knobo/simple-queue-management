@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <title th:text="#{seller.dashboard.title} + ' - Simple Queue'">Seller Dashboard - Simple Queue</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 20px; background-color: #f8f9fa; color: #333; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .language-selector a { text-decoration: none; font-size: 1.5em; margin-left: 5px; opacity: 0.6; }
+        .language-selector a.active { opacity: 1; }
+        .language-selector a:hover { opacity: 1; }
+        .header-actions { display: flex; align-items: center; gap: 15px; }
+        .logout-btn { background: none; border: none; cursor: pointer; font-size: 1.2em; opacity: 0.6; padding: 5px; }
+        .logout-btn:hover { opacity: 1; }
+
+        .card { background: white; padding: 25px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #eaeaea; }
+        .card h3 { margin-top: 0; font-size: 1.3em; color: #222; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+
+        .btn { padding: 10px 20px; color: white; text-decoration: none; border-radius: 4px; border: none; cursor: pointer; font-size: 0.95em; display: inline-block; transition: all 0.2s; }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-primary { background-color: #007bff; }
+        .btn-success { background-color: #28a745; }
+        .btn-warning { background-color: #ffc107; color: #212529; }
+        .btn-secondary { background-color: #6c757d; }
+        .btn-stripe { background: linear-gradient(135deg, #635bff 0%, #7c4dff 100%); font-weight: 600; }
+        .btn-stripe:hover { background: linear-gradient(135deg, #5851db 0%, #6a3fff 100%); }
+
+        /* Stats Grid */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 20px; }
+        .stat-card { background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; }
+        .stat-value { font-size: 2em; font-weight: bold; color: #222; }
+        .stat-label { color: #666; font-size: 0.9em; margin-top: 5px; }
+
+        /* Stripe Connect Section */
+        .stripe-section { margin-top: 20px; }
+        .stripe-status { display: flex; align-items: center; gap: 15px; padding: 20px; border-radius: 8px; }
+        .stripe-status.connected { background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); border: 1px solid #28a745; }
+        .stripe-status.pending { background: linear-gradient(135deg, #fff3cd 0%, #ffeeba 100%); border: 1px solid #ffc107; }
+        .stripe-status.not-connected { background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border: 1px solid #dee2e6; }
+        
+        .stripe-icon { font-size: 2.5em; }
+        .stripe-info { flex: 1; }
+        .stripe-info h4 { margin: 0 0 5px 0; font-size: 1.1em; }
+        .stripe-info p { margin: 0; color: #666; font-size: 0.9em; }
+        
+        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.8em; font-weight: bold; }
+        .status-active { background: #28a745; color: white; }
+        .status-pending { background: #ffc107; color: #212529; }
+        .status-inactive { background: #6c757d; color: white; }
+
+        /* Referral Section */
+        .referral-link-box { display: flex; gap: 10px; margin-top: 15px; }
+        .referral-link-box input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.95em; background: #f8f9fa; }
+        .referral-link-box button { padding: 12px 20px; }
+
+        /* Commission Table */
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { text-align: left; padding: 12px 15px; border-bottom: 1px solid #eee; }
+        th { background-color: #f8f9fa; font-weight: 600; color: #555; text-transform: uppercase; font-size: 0.85em; }
+        tr:last-child td { border-bottom: none; }
+
+        /* Alert messages */
+        .alert { padding: 15px 20px; border-radius: 8px; margin-bottom: 20px; }
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-warning { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+        .alert-info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+
+        @media (max-width: 768px) {
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+            .stripe-status { flex-direction: column; text-align: center; }
+        }
+    </style>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+    <script th:inline="javascript">
+        const i18n = {
+            linkCopied: /*[[#{seller.referral.linkCopied}]]*/ 'Link copied!',
+            copyFailed: /*[[#{seller.referral.copyFailed}]]*/ 'Copy failed',
+            networkError: /*[[#{dashboard.networkError}]]*/ 'Network error occurred.',
+            startingStripe: /*[[#{seller.stripe.starting}]]*/ 'Starting Stripe onboarding...'
+        };
+
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('sellerDashboard', () => ({
+                loading: false,
+                
+                async copyReferralLink() {
+                    const input = document.getElementById('referral-link');
+                    try {
+                        await navigator.clipboard.writeText(input.value);
+                        alert(i18n.linkCopied);
+                    } catch (err) {
+                        // Fallback for older browsers
+                        input.select();
+                        document.execCommand('copy');
+                        alert(i18n.linkCopied);
+                    }
+                },
+
+                async startStripeOnboarding() {
+                    this.loading = true;
+                    try {
+                        const response = await fetch('/api/seller/connect/start', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                        const data = await response.json();
+                        if (data.url) {
+                            window.location.href = data.url;
+                        } else {
+                            alert(data.error || i18n.networkError);
+                            this.loading = false;
+                        }
+                    } catch (error) {
+                        alert(i18n.networkError);
+                        this.loading = false;
+                    }
+                },
+
+                async openStripeDashboard() {
+                    this.loading = true;
+                    try {
+                        const response = await fetch('/api/seller/connect/dashboard', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                        const data = await response.json();
+                        if (data.url) {
+                            window.open(data.url, '_blank');
+                        } else {
+                            alert(data.error || i18n.networkError);
+                        }
+                    } catch (error) {
+                        alert(i18n.networkError);
+                    }
+                    this.loading = false;
+                }
+            }));
+        });
+    </script>
+</head>
+<body>
+<div class="container" x-data="sellerDashboard()">
+    <div class="header">
+        <h1 th:text="#{seller.dashboard.title}">Seller Dashboard</h1>
+        <div class="header-actions">
+            <a href="/dashboard" class="btn btn-secondary" style="font-size: 0.85em; padding: 6px 12px;" th:text="#{seller.backToMain}">Back to Main</a>
+            <div th:replace="~{fragments/language-selector :: selector}"></div>
+            <script th:replace="~{fragments/language-selector :: script}"></script>
+            <form th:action="@{/logout}" method="post" style="margin: 0;">
+                <button type="submit" class="logout-btn" th:title="#{admin.logout}">🚪</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Welcome message with seller status -->
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+            <div>
+                <h3 style="margin: 0; border: none; padding: 0;" th:text="${seller.name}">Seller Name</h3>
+                <p style="margin: 5px 0 0; color: #666;" th:text="${seller.email}">seller@example.com</p>
+            </div>
+            <div>
+                <span class="status-badge" 
+                      th:classappend="${seller.status.name() == 'ACTIVE' ? 'status-active' : 
+                                       seller.status.name() == 'INACTIVE' ? 'status-pending' : 'status-inactive'}"
+                      th:text="${seller.status}">ACTIVE</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="card">
+        <h3 th:text="#{seller.stats.title}">Statistics</h3>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" th:text="${totalReferrals}">0</div>
+                <div class="stat-label" th:text="#{seller.stats.totalReferrals}">Total Referrals</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" th:text="${activeReferrals}">0</div>
+                <div class="stat-label" th:text="#{seller.stats.activeReferrals}">Active Referrals</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" th:text="${#numbers.formatCurrency(totalCommissionEarned)}">$0.00</div>
+                <div class="stat-label" th:text="#{seller.stats.totalEarned}">Total Earned</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" th:text="${#numbers.formatCurrency(unpaidCommission)}">$0.00</div>
+                <div class="stat-label" th:text="#{seller.stats.unpaid}">Unpaid</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stripe Connect Section -->
+    <div class="card">
+        <h3>
+            <span style="margin-right: 8px;">💳</span>
+            <span th:text="#{seller.stripe.title}">Stripe Connect</span>
+        </h3>
+        <p style="color: #666; margin-bottom: 20px;" th:text="#{seller.stripe.description}">
+            Connect your Stripe account to receive commission payouts automatically.
+        </p>
+
+        <!-- Not Connected State -->
+        <div th:if="${stripeStatus == 'NOT_CONNECTED'}" class="stripe-status not-connected">
+            <div class="stripe-icon">🔗</div>
+            <div class="stripe-info">
+                <h4 th:text="#{seller.stripe.notConnected}">Not Connected</h4>
+                <p th:text="#{seller.stripe.notConnectedDesc}">Connect your Stripe account to start receiving automatic payouts.</p>
+            </div>
+            <button class="btn btn-stripe" @click="startStripeOnboarding()" :disabled="loading">
+                <span x-show="!loading" th:text="#{seller.stripe.connect}">Connect Stripe</span>
+                <span x-show="loading">...</span>
+            </button>
+        </div>
+
+        <!-- Pending State -->
+        <div th:if="${stripeStatus == 'PENDING'}" class="stripe-status pending">
+            <div class="stripe-icon">⏳</div>
+            <div class="stripe-info">
+                <h4 th:text="#{seller.stripe.pending}">Setup Incomplete</h4>
+                <p th:text="#{seller.stripe.pendingDesc}">Please complete your Stripe account setup to receive payouts.</p>
+            </div>
+            <button class="btn btn-warning" @click="startStripeOnboarding()" :disabled="loading">
+                <span x-show="!loading" th:text="#{seller.stripe.completeSetup}">Complete Setup</span>
+                <span x-show="loading">...</span>
+            </button>
+        </div>
+
+        <!-- Connected/Active State -->
+        <div th:if="${stripeStatus == 'ACTIVE'}" class="stripe-status connected">
+            <div class="stripe-icon">✅</div>
+            <div class="stripe-info">
+                <h4 th:text="#{seller.stripe.connected}">Stripe Connected</h4>
+                <p th:text="#{seller.stripe.connectedDesc}">Your Stripe account is connected. Payouts will be sent automatically.</p>
+            </div>
+            <button class="btn btn-success" @click="openStripeDashboard()" :disabled="loading">
+                <span x-show="!loading" th:text="#{seller.stripe.openDashboard}">Open Stripe Dashboard</span>
+                <span x-show="loading">...</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Referral Link Section -->
+    <div class="card">
+        <h3 th:text="#{seller.referral.title}">Your Referral Link</h3>
+        <p style="color: #666;" th:text="#{seller.referral.description}">
+            Share this link with potential customers. You'll earn commission on their subscriptions.
+        </p>
+        <div class="referral-link-box">
+            <input type="text" id="referral-link" th:value="${referralLink}" readonly>
+            <button class="btn btn-primary" @click="copyReferralLink()" th:text="#{seller.referral.copy}">Copy</button>
+        </div>
+        <p style="margin-top: 15px; font-size: 0.9em; color: #666;">
+            <span th:text="#{seller.referral.code}">Your code:</span>
+            <strong th:text="${seller.referralCode}">ABCD1234</strong>
+        </p>
+    </div>
+
+    <!-- Commission Terms -->
+    <div class="card">
+        <h3 th:text="#{seller.terms.title}">Your Commission Terms</h3>
+        <table>
+            <tr>
+                <td th:text="#{seller.terms.rate}">Commission Rate</td>
+                <td><strong th:text="${seller.commissionPercent + '%'}">20%</strong></td>
+            </tr>
+            <tr>
+                <td th:text="#{seller.terms.period}">Commission Period</td>
+                <td><strong th:text="${seller.commissionPeriodMonths + ' ' + #messages.msg('seller.terms.months')}">12 months</strong></td>
+            </tr>
+            <tr th:if="${seller.commissionCapPerCustomer != null}">
+                <td th:text="#{seller.terms.cap}">Cap per Customer</td>
+                <td><strong th:text="${#numbers.formatCurrency(seller.commissionCapPerCustomer)}">$100</strong></td>
+            </tr>
+            <tr>
+                <td th:text="#{seller.terms.salesRequired}">Sales to Maintain Status</td>
+                <td><strong th:text="${seller.minSalesToMaintain + ' / ' + seller.statusPeriodMonths + ' ' + #messages.msg('seller.terms.months')}">5 / 6 months</strong></td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Status Maintenance Alert -->
+    <div th:if="${daysUntilStatusExpires != null}" class="alert" 
+         th:classappend="${daysUntilStatusExpires > 30 ? 'alert-info' : 'alert-warning'}">
+        <strong th:text="#{seller.status.alert.title}">Status Alert:</strong>
+        <span th:text="#{seller.status.alert.message(${salesThisPeriod}, ${seller.minSalesToMaintain}, ${daysUntilStatusExpires})}">
+            You have X sales this period. You need Y more to maintain your active status. Z days remaining.
+        </span>
+    </div>
+</div>
+</body>
+</html>

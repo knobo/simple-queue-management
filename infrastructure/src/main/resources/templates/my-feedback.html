@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <title>Mine tilbakemeldinger - Simple Queue</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            padding: 20px;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .card {
+            background: white;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border: 1px solid #eaeaea;
+        }
+        .btn {
+            padding: 10px 20px;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.95em;
+            display: inline-block;
+            transition: opacity 0.2s;
+        }
+        .btn:hover {
+            opacity: 0.9;
+        }
+        .btn-primary {
+            background-color: #007bff;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+        }
+        .btn-outline {
+            background: white;
+            border: 2px solid #007bff;
+            color: #007bff;
+        }
+        .alert {
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .empty-state .icon {
+            font-size: 4em;
+            margin-bottom: 15px;
+        }
+        .feedback-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .feedback-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 15px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .feedback-item:last-child {
+            border-bottom: none;
+        }
+        .feedback-icon {
+            font-size: 1.8em;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+        .feedback-content {
+            flex: 1;
+        }
+        .feedback-title {
+            font-weight: 600;
+            color: #222;
+            margin-bottom: 4px;
+        }
+        .feedback-meta {
+            font-size: 0.9em;
+            color: #666;
+        }
+        .feedback-status {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        .status-NEW {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status-IN_PROGRESS {
+            background: #cce5ff;
+            color: #004085;
+        }
+        .status-RESOLVED {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status-CLOSED {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+        .category-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75em;
+            background: #e9ecef;
+            color: #495057;
+            margin-left: 8px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>Mine tilbakemeldinger</h1>
+        <div class="header-actions">
+            <a href="/dashboard" class="btn btn-outline">← Dashboard</a>
+            <a href="/feedback" class="btn btn-primary">+ Ny tilbakemelding</a>
+        </div>
+    </div>
+
+    <div th:if="${success}" class="alert alert-success" th:text="${message}"></div>
+
+    <div class="card">
+        <div th:if="${feedbackList.empty}" class="empty-state">
+            <div class="icon">📭</div>
+            <h3>Ingen tilbakemeldinger ennå</h3>
+            <p>Du har ikke sendt noen tilbakemeldinger. Har du forslag eller funnet en feil?</p>
+            <a href="/feedback" class="btn btn-primary" style="margin-top: 15px;">Gi tilbakemelding</a>
+        </div>
+
+        <ul th:unless="${feedbackList.empty}" class="feedback-list">
+            <li th:each="feedback : ${feedbackList}" class="feedback-item">
+                <div class="feedback-icon">
+                    <span th:if="${feedback.type.name() == 'BUG'}">🐛</span>
+                    <span th:if="${feedback.type.name() == 'FEATURE'}">💡</span>
+                    <span th:if="${feedback.type.name() == 'GENERAL'}">💬</span>
+                </div>
+                <div class="feedback-content">
+                    <div class="feedback-title">
+                        <span th:text="${feedback.title}">Tittel</span>
+                        <span class="feedback-status"
+                              th:classappend="'status-' + ${feedback.status.name()}">
+                            <span th:if="${feedback.status.name() == 'NEW'}">Mottatt</span>
+                            <span th:if="${feedback.status.name() == 'IN_PROGRESS'}">Under behandling</span>
+                            <span th:if="${feedback.status.name() == 'RESOLVED'}">Løst</span>
+                            <span th:if="${feedback.status.name() == 'CLOSED'}">Lukket</span>
+                        </span>
+                        <span class="category-badge" th:text="${feedback.category.name()}">Kategori</span>
+                    </div>
+                    <div class="feedback-meta">
+                        Sendt
+                        <span th:text="${#temporals.format(feedback.createdAt, 'd. MMM yyyy')}">1. jan 2025</span>
+                    </div>
+                </div>
+            </li>
+        </ul>
+    </div>
+</div>
+</body>
+</html>

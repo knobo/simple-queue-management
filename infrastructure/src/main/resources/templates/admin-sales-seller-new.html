@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Add Seller - Sales Admin - Simple Queue</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 20px; background-color: #f8f9fa; color: #333; }
+        .container { max-width: 700px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .btn { padding: 8px 16px; color: white; text-decoration: none; border-radius: 4px; border: none; cursor: pointer; font-size: 0.95em; display: inline-block; transition: opacity 0.2s; }
+        .btn:hover { opacity: 0.9; }
+        .btn-primary { background-color: #007bff; }
+        .btn-secondary { background-color: #6c757d; }
+        .btn-success { background-color: #28a745; }
+
+        .card { background: white; padding: 25px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #eaeaea; }
+
+        h1 { margin: 0; font-size: 1.8em; }
+        h2 { margin-top: 0; margin-bottom: 15px; font-size: 1.3em; color: #333; }
+
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 600; color: #555; }
+        .form-group input, .form-group select { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em; box-sizing: border-box; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #007bff; box-shadow: 0 0 0 3px rgba(0,123,255,0.1); }
+        .form-group .hint { font-size: 0.85em; color: #888; margin-top: 4px; }
+
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+        .required::after { content: " *"; color: #dc3545; }
+
+        .section-title { font-size: 1.1em; font-weight: 600; color: #333; margin: 25px 0 15px 0; padding-bottom: 8px; border-bottom: 1px solid #eee; }
+        .section-title:first-of-type { margin-top: 0; }
+
+        .form-actions { display: flex; gap: 10px; margin-top: 25px; }
+
+        .alert { padding: 12px 16px; border-radius: 4px; margin-bottom: 20px; }
+        .alert-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .alert-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div>
+            <h1>➕ Add New Seller</h1>
+            <p style="color: #666; margin: 5px 0 0 0;">Create a new seller account</p>
+        </div>
+        <div>
+            <a href="/admin/sales" class="btn btn-secondary">← Back to Sales</a>
+        </div>
+    </div>
+
+    <!-- Error/Success Messages -->
+    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+    <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+
+    <div class="card">
+        <form method="post" action="/admin/sales/sellers">
+            <!-- Basic Information -->
+            <div class="section-title">Basic Information</div>
+            
+            <div class="form-group">
+                <label for="userId" class="required">User ID</label>
+                <input type="text" id="userId" name="userId" required placeholder="Keycloak user ID (UUID)">
+                <div class="hint">The Keycloak subject/user ID for this seller</div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="name" class="required">Name</label>
+                    <input type="text" id="name" name="name" required placeholder="Full name">
+                </div>
+                <div class="form-group">
+                    <label for="email" class="required">Email</label>
+                    <input type="email" id="email" name="email" required placeholder="seller@example.com">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="phone">Phone</label>
+                <input type="tel" id="phone" name="phone" placeholder="+47 123 45 678">
+            </div>
+
+            <!-- Commission Settings -->
+            <div class="section-title">Commission Settings</div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="commissionPercent">Commission Percent</label>
+                    <input type="number" id="commissionPercent" name="commissionPercent" step="0.01" min="0" max="100" placeholder="20.00">
+                    <div class="hint">Default: 20%</div>
+                </div>
+                <div class="form-group">
+                    <label for="commissionCapPerCustomer">Commission Cap per Customer (NOK)</label>
+                    <input type="number" id="commissionCapPerCustomer" name="commissionCapPerCustomer" step="0.01" min="0" placeholder="No cap">
+                    <div class="hint">Maximum commission per referred customer</div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="commissionPeriodMonths">Commission Period (months)</label>
+                <input type="number" id="commissionPeriodMonths" name="commissionPeriodMonths" min="1" max="120" placeholder="12">
+                <div class="hint">How long the seller earns commission on referred customers. Default: 12 months</div>
+            </div>
+
+            <!-- Status Requirements -->
+            <div class="section-title">Status Requirements</div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="minSalesToMaintain">Min Sales to Maintain Status</label>
+                    <input type="number" id="minSalesToMaintain" name="minSalesToMaintain" min="0" placeholder="5">
+                    <div class="hint">Minimum referrals to stay active. Default: 5</div>
+                </div>
+                <div class="form-group">
+                    <label for="statusPeriodMonths">Status Period (months)</label>
+                    <input type="number" id="statusPeriodMonths" name="statusPeriodMonths" min="1" max="24" placeholder="6">
+                    <div class="hint">Period for status evaluation. Default: 6 months</div>
+                </div>
+            </div>
+
+            <!-- Payout Settings -->
+            <div class="section-title">Payout Settings</div>
+
+            <div class="form-group">
+                <label for="payoutMethod">Payout Method</label>
+                <select id="payoutMethod" name="payoutMethod">
+                    <option th:each="method : ${payoutMethods}" th:value="${method.name()}" th:text="${method.name()}" th:selected="${method.name() == 'MANUAL'}"></option>
+                </select>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-success">Create Seller</button>
+                <a href="/admin/sales" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>
