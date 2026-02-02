@@ -1,7 +1,6 @@
 package com.example.simplequeue.infrastructure.config
 
 import com.example.simplequeue.application.service.ReferralService
-import com.example.simplequeue.domain.port.QueueRepository
 import com.example.simplequeue.infrastructure.filter.ReferralCookieFilter
 import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletRequest
@@ -13,19 +12,17 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.stereotype.Component
 
 /**
- * Custom login success handler that:
+ * Custom login success handler for Management Platform that:
  * 1. Processes any referral code from cookie (links user to seller)
  * 2. Redirects users based on their role
  *
  * Redirect priority order:
  * 1. SUPERADMIN → /admin/sales
  * 2. SELLER → /seller/dashboard
- * 3. User with queues → /dashboard
- * 4. User without queues (customer) → /portal/history
+ * 3. Default → /subscription
  */
 @Component
 class LoginSuccessHandler(
-    private val queueRepository: QueueRepository,
     private val referralService: ReferralService,
 ) : AuthenticationSuccessHandler {
 
@@ -54,13 +51,9 @@ class LoginSuccessHandler(
                 logger.info("Redirecting SELLER to /seller/dashboard")
                 "/seller/dashboard"
             }
-            queueRepository.findByOwnerId(userId).isNotEmpty() -> {
-                logger.info("User has queues, redirecting to /dashboard")
-                "/dashboard"
-            }
             else -> {
-                logger.info("User has no queues (customer), redirecting to /portal/history")
-                "/portal/history"
+                logger.info("Redirecting to /subscription")
+                "/subscription"
             }
         }
 

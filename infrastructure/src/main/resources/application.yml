@@ -1,7 +1,7 @@
 ---
 spring:
   application:
-    name: simple-queue
+    name: simple-queue-management
   messages:
     basename: messages
     encoding: UTF-8
@@ -17,11 +17,11 @@ spring:
           auth: ${SMTP_AUTH:true}
           starttls:
             enable: ${SMTP_STARTTLS:true}
-    from: ${MAIL_FROM:noreply@example.com}
+    from: ${MAIL_FROM:noreply@management.knobo.no}
   datasource:
-    url: jdbc:postgresql://localhost:5432/simplequeue
-    username: user
-    password: password
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/simplequeue}
+    username: ${DATABASE_USERNAME:user}
+    password: ${DATABASE_PASSWORD:password}
   flyway:
     enabled: true
     locations: classpath:db/migration
@@ -69,17 +69,23 @@ stripe:
   secret-key: ${STRIPE_SECRET_KEY:}
   publishable-key: ${STRIPE_PUBLISHABLE_KEY:}
   webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+  connect:
+    webhook-secret: ${STRIPE_CONNECT_WEBHOOK_SECRET:}
   prices:
     starter: ${STRIPE_PRICE_STARTER:price_1SvabCJpRTNhfgZpd1R2of7C}
     pro: ${STRIPE_PRICE_PRO:price_1SvabYJpRTNhfgZp194NchTA}
     enterprise: ${STRIPE_PRICE_ENTERPRISE:price_1SvabqJpRTNhfgZpJjLW7uzi}
 
 app:
-  base-url: ${APP_BASE_URL:http://localhost:8080}
+  base-url: ${APP_BASE_URL:https://management.knobo.no}
 
 logging:
   level:
     org:
-      flywaydb: DEBUG
+      flywaydb: INFO
       springframework:
-        jdbc: DEBUG
+        jdbc: INFO
+        security: INFO
+    com:
+      example:
+        simplequeue: DEBUG

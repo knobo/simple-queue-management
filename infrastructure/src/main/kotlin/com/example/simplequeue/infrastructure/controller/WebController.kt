@@ -1,24 +1,13 @@
 package com.example.simplequeue.infrastructure.controller
 
-import com.example.simplequeue.application.service.SubscriptionLimits
 import com.example.simplequeue.application.service.SubscriptionService
 import com.example.simplequeue.application.usecase.CreateSellerUseCase
 import com.example.simplequeue.application.usecase.GetAdminSalesDashboardUseCase
-import com.example.simplequeue.application.usecase.GetMyQueuesUseCase
 import com.example.simplequeue.application.usecase.GetSellerDashboardUseCase
-import com.example.simplequeue.application.usecase.IssueTicketUseCase
-import com.example.simplequeue.application.usecase.SendTicketEmailUseCase
 import com.example.simplequeue.domain.model.Seller
-import com.example.simplequeue.domain.model.Ticket
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.example.simplequeue.domain.port.CounterRepository
-import com.example.simplequeue.domain.port.InviteRepository
-import com.example.simplequeue.domain.port.QueueMemberRepository
-import com.example.simplequeue.domain.port.QueueRepository
-import com.example.simplequeue.domain.port.QueueStateRepository
 import com.example.simplequeue.domain.port.SellerPaymentGateway
 import com.example.simplequeue.domain.port.SellerRepository
-import com.example.simplequeue.domain.port.TicketRepository
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -28,32 +17,25 @@ import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import java.math.BigDecimal
-import java.util.UUID
 
+/**
+ * Management Platform Web Controller.
+ * Handles web views for subscription management, sales admin, and seller dashboard.
+ * Note: Queue operations views are handled by Queue Core service.
+ */
 @Controller
 class WebController(
-    private val queueRepository: QueueRepository,
-    private val ticketRepository: TicketRepository,
-    private val issueTicketUseCase: IssueTicketUseCase,
-    private val sendTicketEmailUseCase: SendTicketEmailUseCase,
-    private val queueStateRepository: QueueStateRepository,
-    private val queueMemberRepository: QueueMemberRepository,
-    private val inviteRepository: InviteRepository,
-    private val counterRepository: CounterRepository,
     private val subscriptionService: SubscriptionService,
     private val getAdminSalesDashboardUseCase: GetAdminSalesDashboardUseCase,
     private val createSellerUseCase: CreateSellerUseCase,
-    private val getMyQueuesUseCase: GetMyQueuesUseCase,
     private val getSellerDashboardUseCase: GetSellerDashboardUseCase,
     private val sellerRepository: SellerRepository,
     private val sellerPaymentGateway: SellerPaymentGateway,
     private val objectMapper: ObjectMapper,
-    @Value("\${ntfy.url:https://ntfy.sh}") private val ntfyUrl: String,
     @Value("\${app.base-url:http://localhost:8080}") private val baseUrl: String,
 ) {
     companion object {
@@ -68,17 +50,13 @@ class WebController(
         model: Model,
         @AuthenticationPrincipal user: OAuth2User?,
     ): String {
-        // If user is authenticated, check if they have queues
-        if (user != null) {
-            val queues = getMyQueuesUseCase.execute(user.name)
-            return if (queues.isNotEmpty()) {
-                "redirect:/dashboard"
-            } else {
-                "redirect:/portal"
-            }
+        // If user is authenticated, redirect to subscription page
+        return if (user != null) {
+            "redirect:/subscription"
+        } else {
+            // Show landing page for non-authenticated users
+            "landing"
         }
-        // Show landing page for non-authenticated users
-        return "landing"
     }
 
     /**
@@ -89,203 +67,6 @@ class WebController(
     @GetMapping("/signup")
     fun signup(): String {
         return "redirect:/oauth2/authorization/keycloak?prompt=create"
-    }
-
-    @GetMapping("/dashboard")
-    fun dashboard(
-        model: Model,
-        @AuthenticationPrincipal user: OAuth2User,
-    ): String {
-        val username = user.attributes["preferred_username"] as String
-        val queues = queueRepository.findByOwnerId(user.name)
-
-        val queuesView =
-            queues.map { queue ->
-                val waitingTickets = ticketRepository.findByQueueIdAndStatus(queue.id, Ticket.TicketStatus.WAITING)
-                val activeTickets = ticketRepository.findByQueueIdAndStatus(queue.id, Ticket.TicketStatus.CALLED)
-
-                mapOf(
-                    "id" to queue.id,
-                    "name" to queue.name,
-                    "open" to queue.open,
-                    "waitingTickets" to waitingTickets.map { toTicketMap(it) },
-                    "activeTickets" to activeTickets.map { toTicketMap(it) },
-                    "ntfyTopic" to "simple-queue-${queue.id}",
-                    "qrCodeSecret" to queue.qrCodeSecret,
-                    "displayToken" to queue.displayToken,
-                    "accessTokenMode" to queue.accessTokenMode.name,
-                    "isStaticMode" to (queue.accessTokenMode == com.example.simplequeue.domain.model.AccessTokenMode.STATIC),
-                    "staticJoinUrl" to "$baseUrl/public/q/${queue.id}/join?secret=${queue.qrCodeSecret}",
-                )
-            }
-
-        model.addAttribute("queues", queuesView)
-        model.addAttribute("username", username)
-        model.addAttribute("ntfyUrl", ntfyUrl)
-        model.addAttribute("isSuperadmin", hasSuperadminRole(user))
-        return "dashboard"
-    }
-
-    private fun toTicketMap(ticket: Ticket): Map<String, Any?> =
-        mapOf(
-            "id" to ticket.id,
-            "code" to String.format("A-%03d", ticket.number),
-            "name" to ticket.name,
-            "number" to ticket.number,
-        )
-
-    @GetMapping("/create-queue")
-    fun createQueuePage(): String = "create-queue"
-
-    // Public QR Code Page
-    @GetMapping("/public/q/{queueId}/qr")
-    fun displayQr(
-        @PathVariable queueId: UUID,
-        model: Model,
-    ): String {
-        val queue = queueRepository.findById(queueId) ?: throw IllegalArgumentException("Queue not found")
-        model.addAttribute("queue", queue)
-        model.addAttribute("queueId", queueId)
-        return "qr-code"
-    }
-
-    // Public Join Page
-    @GetMapping("/public/q/{queueId}/join")
-    fun joinQueuePage(
-        @PathVariable queueId: UUID,
-        @RequestParam("secret") secret: String,
-        @RequestParam(defaultValue = "false") kiosk: Boolean,
-        model: Model,
-    ): String {
-        logger.info("Joining queue page: {}, kiosk mode: {}", queueId, kiosk)
-
-        val queue = queueRepository.findById(queueId) ?: throw IllegalArgumentException("Queue not found")
-        logger.info("Joining queue page: {}", queue)
-        model.addAttribute("queue", queue)
-        model.addAttribute("queueId", queueId)
-        model.addAttribute("secret", secret)
-        model.addAttribute("kioskMode", kiosk)
-        return "join-queue"
-    }
-
-    @PostMapping("/public/q/{queueId}/ticket")
-    fun issueTicket(
-        @PathVariable queueId: UUID,
-        @RequestParam("secret") secret: String,
-        @RequestParam("name", required = false) name: String?,
-        @RequestParam("email", required = false) email: String?,
-        @RequestParam(defaultValue = "false") kiosk: Boolean,
-        model: Model,
-    ): String {
-        val cleanEmail = email?.takeIf { it.isNotBlank() }
-        val ticket = issueTicketUseCase.execute(queueId, secret, name, cleanEmail)
-        
-        // Auto-send email if provided
-        if (!cleanEmail.isNullOrBlank()) {
-            try {
-                sendTicketEmailUseCase.execute(ticket.id, cleanEmail)
-                logger.info("Auto-sent ticket email to {} for ticket {}", cleanEmail, ticket.id)
-            } catch (e: Exception) {
-                logger.warn("Failed to auto-send ticket email to {}: {}", cleanEmail, e.message)
-                // Don't fail the request if email sending fails
-            }
-        }
-        
-        // Include kiosk parameter in redirect if enabled
-        return if (kiosk) {
-            "redirect:/public/tickets/${ticket.id}?kiosk=true"
-        } else {
-            "redirect:/public/tickets/${ticket.id}"
-        }
-    }
-
-    @GetMapping("/queue/{queueId}/admin")
-    fun adminQueuePage(
-        @PathVariable queueId: UUID,
-        model: Model,
-        @AuthenticationPrincipal user: OAuth2User,
-    ): String {
-        val queue = queueRepository.findById(queueId) ?: throw IllegalArgumentException("Queue not found")
-        val username = user.attributes["preferred_username"] as String
-        
-        // Check ownership
-        if (queue.ownerId != user.name) {
-            throw IllegalStateException("Access denied")
-        }
-
-        val waitingCount = ticketRepository.countByQueueId(queueId)
-        val states = queueStateRepository.findByQueueId(queueId)
-        val members = queueMemberRepository.findByQueueId(queueId)
-        val pendingInvites = inviteRepository.findPendingByQueueId(queueId)
-        val counters = counterRepository.findByQueueId(queueId)
-        val tierLimits = subscriptionService.getTierLimitForUser(queue.ownerId)
-
-        model.addAttribute("queue", queue)
-        model.addAttribute("waitingCount", waitingCount)
-        model.addAttribute("states", states)
-        model.addAttribute("members", members)
-        model.addAttribute("pendingInvites", pendingInvites)
-        model.addAttribute("counters", counters)
-        model.addAttribute("tierLimits", tierLimits)
-        model.addAttribute("username", username)
-        return "admin-queue"
-    }
-
-    @GetMapping("/public/q/{queueId}/display")
-    fun displayStand(
-        @PathVariable queueId: UUID,
-        model: Model,
-    ): String {
-        val queue = queueRepository.findById(queueId) ?: throw IllegalArgumentException("Queue not found")
-        val waitingTickets = ticketRepository.findByQueueIdAndStatus(queue.id, Ticket.TicketStatus.WAITING)
-        val activeTickets = ticketRepository.findByQueueIdAndStatus(queue.id, Ticket.TicketStatus.CALLED)
-
-        model.addAttribute("queue", queue)
-        model.addAttribute("waitingTickets", waitingTickets.map { toTicketMap(it) })
-        model.addAttribute("activeTickets", activeTickets.map { toTicketMap(it) })
-
-        return "display-stand"
-    }
-
-    @GetMapping("/public/tickets/{ticketId}")
-    fun ticketStatus(
-        @PathVariable ticketId: UUID,
-        model: Model,
-    ): String {
-        val ticket = ticketRepository.findById(ticketId) ?: throw IllegalArgumentException("Ticket not found")
-        val queue = queueRepository.findById(ticket.queueId) ?: throw IllegalArgumentException("Queue not found")
-        
-        // Check if queue is closed
-        if (!queue.open) {
-            throw QueueClosedException("Queue is currently closed")
-        }
-        
-        val queueId = ticket.queueId
-
-        // Calculate position?
-        // Last called number
-        val lastCalled = ticketRepository.getLastCalledNumber(queueId)
-        val avgTime = ticketRepository.getAverageProcessingTimeSeconds(queueId)
-
-        model.addAttribute("ticket", ticket)
-        model.addAttribute("queue", queue)
-        model.addAttribute("lastCalled", lastCalled)
-        model.addAttribute("avgTime", avgTime)
-        model.addAttribute("queueTopic", "simple-queue-$queueId")
-        model.addAttribute("autoCloseSeconds", queue.autoCloseSeconds)
-
-        return "ticket-status"
-    }
-
-    @PostMapping("/public/tickets/{ticketId}/send-email")
-    fun sendTicketToEmail(
-        @PathVariable ticketId: UUID,
-        @RequestParam email: String,
-        redirectAttributes: RedirectAttributes,
-    ): String {
-        sendTicketEmailUseCase.execute(ticketId, email)
-        redirectAttributes.addFlashAttribute("emailSent", true)
-        return "redirect:/public/tickets/$ticketId"
     }
 
     @GetMapping("/subscription")
@@ -418,7 +199,7 @@ class WebController(
         if (!isSuperadmin) {
             logger.warn("ACCESS DENIED: User ${user.name} does not have superadmin role")
             logger.info("========== /admin/sales DEBUG END (DENIED) ==========")
-            return "redirect:/dashboard"
+            return "redirect:/subscription"
         }
 
         logger.info("ACCESS GRANTED: User has superadmin role!")
@@ -448,7 +229,7 @@ class WebController(
         // Check if user has superadmin role
         if (!hasSuperadminRole(user)) {
             logger.warn("ACCESS DENIED: User ${user.name} does not have superadmin role for /admin/sales/sellers/new")
-            return "redirect:/dashboard"
+            return "redirect:/subscription"
         }
 
         // Add PayoutMethod enum values to model for dropdown
@@ -474,7 +255,7 @@ class WebController(
         // Check if user has superadmin role
         if (!hasSuperadminRole(user)) {
             logger.warn("ACCESS DENIED: User ${user.name} does not have superadmin role for POST /admin/sales/sellers")
-            return "redirect:/dashboard"
+            return "redirect:/subscription"
         }
 
         return try {
@@ -516,7 +297,7 @@ class WebController(
         // Check if user has superadmin role
         if (!hasSuperadminRole(user)) {
             logger.warn("ACCESS DENIED: User ${user.name} does not have superadmin role for /admin/tier-limits")
-            return "redirect:/dashboard"
+            return "redirect:/subscription"
         }
 
         val limits = subscriptionService.getAllTierLimits().map { limit ->
@@ -561,7 +342,7 @@ class WebController(
         val seller = sellerRepository.findByUserId(user.name)
         if (seller == null) {
             logger.warn("User ${user.name} tried to access seller dashboard but is not a seller")
-            return "redirect:/dashboard"
+            return "redirect:/subscription"
         }
 
         return try {
@@ -590,7 +371,7 @@ class WebController(
             "seller-dashboard"
         } catch (e: IllegalStateException) {
             logger.error("Error loading seller dashboard: ${e.message}", e)
-            "redirect:/dashboard"
+            "redirect:/subscription"
         }
     }
 
@@ -602,7 +383,7 @@ class WebController(
         val seller = sellerRepository.findByUserId(user.name)
         if (seller == null) {
             logger.warn("User ${user.name} tried to access connect return but is not a seller")
-            return "redirect:/dashboard"
+            return "redirect:/subscription"
         }
 
         // Fetch latest account status from Stripe if we have an account
@@ -637,7 +418,7 @@ class WebController(
         val seller = sellerRepository.findByUserId(user.name)
         if (seller == null) {
             logger.warn("User ${user.name} tried to access connect refresh but is not a seller")
-            return "redirect:/dashboard"
+            return "redirect:/subscription"
         }
 
         return "seller-connect-refresh"

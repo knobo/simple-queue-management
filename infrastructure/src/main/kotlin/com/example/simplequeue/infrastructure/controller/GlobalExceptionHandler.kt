@@ -47,20 +47,6 @@ class GlobalExceptionHandler {
             ))
     }
 
-    /**
-     * Handle QueueClosedException - returns a friendly error page when queue is closed.
-     */
-    @ExceptionHandler(QueueClosedException::class)
-    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
-    fun handleQueueClosed(
-        exception: QueueClosedException,
-        model: Model,
-    ): String {
-        logger.info("Queue closed: ${exception.message}")
-        model.addAttribute("message", exception.message)
-        return "queue-closed"
-    }
-
     @ExceptionHandler(Throwable::class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     fun handleException(
