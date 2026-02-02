@@ -9,8 +9,6 @@ import com.example.simplequeue.application.usecase.GetAdminSalesDashboardUseCase
 import com.example.simplequeue.application.usecase.GetSellerDashboardUseCase
 import com.example.simplequeue.domain.port.CommissionEntryRepository
 import com.example.simplequeue.domain.port.OrganizationRepository
-import com.example.simplequeue.domain.port.QueueMemberRepository
-import com.example.simplequeue.domain.port.QueueRepository
 import com.example.simplequeue.domain.port.SellerActivityLogRepository
 import com.example.simplequeue.domain.port.SellerPayoutRepository
 import com.example.simplequeue.domain.port.SellerReferralRepository
@@ -31,11 +29,15 @@ class UseCaseConfig {
     @Bean
     open fun subscriptionService(
         subscriptionRepository: SubscriptionRepository,
-        queueRepository: QueueRepository,
-        queueMemberRepository: QueueMemberRepository,
         tierLimitRepository: TierLimitRepository,
         sellerReferralRepository: SellerReferralRepository,
-    ): SubscriptionService = SubscriptionService(subscriptionRepository, queueRepository, queueMemberRepository, tierLimitRepository, sellerReferralRepository)
+    ): SubscriptionService = SubscriptionService(
+        subscriptionRepository = subscriptionRepository,
+        queueRepository = null, // Not needed in Management Platform
+        queueMemberRepository = null, // Not needed in Management Platform
+        tierLimitRepository = tierLimitRepository,
+        sellerReferralRepository = sellerReferralRepository,
+    )
 
     // =============================================================================
     // Sales System Use Cases

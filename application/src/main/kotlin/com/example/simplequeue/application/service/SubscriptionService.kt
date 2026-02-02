@@ -48,11 +48,14 @@ data class SubscriptionLimits(
 
 /**
  * Service for managing user subscriptions and checking feature limits.
+ * 
+ * Note: In Management Platform, queue-related methods are not available.
+ * Use Queue Core service for queue quota checks.
  */
 class SubscriptionService(
     private val subscriptionRepository: SubscriptionRepository,
-    private val queueRepository: QueueRepository,
-    private val queueMemberRepository: QueueMemberRepository,
+    private val queueRepository: QueueRepository? = null, // Optional - only needed in Queue Core
+    private val queueMemberRepository: QueueMemberRepository? = null, // Optional - only needed in Queue Core
     private val tierLimitRepository: TierLimitRepository? = null, // Optional for backward compatibility
     private val sellerReferralRepository: SellerReferralRepository? = null, // Optional for backward compatibility
 ) {
@@ -121,34 +124,46 @@ class SubscriptionService(
 
     /**
      * Check if a user can create a new queue based on their subscription limits.
+     * Note: Only available when queueRepository is configured (Queue Core service).
      */
     fun canCreateQueue(userId: String): Boolean {
+        val repo = queueRepository
+            ?: throw IllegalStateException("Queue operations not available in Management Platform. Use Queue Core service.")
         val limit = getTierLimitForUser(userId)
-        val currentQueues = queueRepository.findByOwnerId(userId).size
+        val currentQueues = repo.findByOwnerId(userId).size
         return limit.canCreateQueue(currentQueues)
     }
 
     /**
      * Check if a user can invite another operator to a specific queue.
+     * Note: Only available when queueMemberRepository is configured (Queue Core service).
      */
     fun canInviteOperator(userId: String, queueId: UUID): Boolean {
+        val repo = queueMemberRepository
+            ?: throw IllegalStateException("Queue operations not available in Management Platform. Use Queue Core service.")
         val limit = getTierLimitForUser(userId)
-        val currentMembers = queueMemberRepository.countByQueueId(queueId)
+        val currentMembers = repo.countByQueueId(queueId)
         return limit.canAddOperator(currentMembers)
     }
 
     /**
      * Get the number of queues a user currently owns.
+     * Note: Only available when queueRepository is configured (Queue Core service).
      */
     fun getQueueCount(userId: String): Int {
-        return queueRepository.findByOwnerId(userId).size
+        val repo = queueRepository
+            ?: throw IllegalStateException("Queue operations not available in Management Platform. Use Queue Core service.")
+        return repo.findByOwnerId(userId).size
     }
 
     /**
      * Get the number of operators for a specific queue.
+     * Note: Only available when queueMemberRepository is configured (Queue Core service).
      */
     fun getOperatorCount(queueId: UUID): Int {
-        return queueMemberRepository.countByQueueId(queueId)
+        val repo = queueMemberRepository
+            ?: throw IllegalStateException("Queue operations not available in Management Platform. Use Queue Core service.")
+        return repo.countByQueueId(queueId)
     }
 
     /**
