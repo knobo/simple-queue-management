@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <title th:text="#{subscription.title} + ' - Simple Queue'">Subscription - Simple Queue</title>
     <style>
@@ -68,8 +70,14 @@
 
         /* Responsive */
         @media (max-width: 768px) {
+            body { padding: 10px; }
+            .header { flex-direction: column; align-items: flex-start; gap: 15px; }
+            .header h1 { font-size: 1.4em; }
+            .header-actions { flex-wrap: wrap; gap: 8px; }
             .current-plan { flex-direction: column; align-items: flex-start; }
             .plans-grid { grid-template-columns: 1fr; }
+            .card { padding: 15px; }
+            .btn { min-height: 44px; padding: 12px 16px; }
         }
 
         /* Modal */
