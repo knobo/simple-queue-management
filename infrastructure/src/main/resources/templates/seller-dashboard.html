@@ -77,13 +77,17 @@
             linkCopied: /*[[#{seller.referral.linkCopied}]]*/ 'Link copied!',
             copyFailed: /*[[#{seller.referral.copyFailed}]]*/ 'Copy failed',
             networkError: /*[[#{dashboard.networkError}]]*/ 'Network error occurred.',
-            startingStripe: /*[[#{seller.stripe.starting}]]*/ 'Starting Stripe onboarding...'
+            startingStripe: /*[[#{seller.stripe.starting}]]*/ 'Starting Stripe onboarding...',
+            stripeNotConfigured: /*[[#{seller.stripe.error.notConfigured}]]*/ 'Stripe Connect is not configured for this platform. Please contact the administrator.',
+            stripeGenericError: /*[[#{seller.stripe.error.generic}]]*/ 'An error occurred while connecting to Stripe. Please try again later.'
         };
 
         document.addEventListener('alpine:init', () => {
             Alpine.data('sellerDashboard', () => ({
                 loading: false,
-                
+                stripeError: null,
+                stripeErrorType: null,
+
                 async copyReferralLink() {
                     const input = document.getElementById('referral-link');
                     try {
@@ -97,8 +101,14 @@
                     }
                 },
 
+                clearStripeError() {
+                    this.stripeError = null;
+                    this.stripeErrorType = null;
+                },
+
                 async startStripeOnboarding() {
                     this.loading = true;
+                    this.clearStripeError();
                     try {
                         const response = await fetch('/api/seller/connect/start', {
                             method: 'POST',
@@ -108,11 +118,14 @@
                         if (data.url) {
                             window.location.href = data.url;
                         } else {
-                            alert(data.error || i18n.networkError);
+                            // Handle error response from API
+                            this.stripeError = data.error || i18n.stripeGenericError;
+                            this.stripeErrorType = response.status === 409 ? 'config' : 'generic';
                             this.loading = false;
                         }
                     } catch (error) {
-                        alert(i18n.networkError);
+                        this.stripeError = i18n.networkError;
+                        this.stripeErrorType = 'network';
                         this.loading = false;
                     }
                 },
@@ -201,6 +214,12 @@
         <p style="color: #666; margin-bottom: 20px;" th:text="#{seller.stripe.description}">
             Connect your Stripe account to receive commission payouts automatically.
         </p>
+
+        <!-- Error Alert -->
+        <div x-show="stripeError" x-transition class="alert" style="background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; margin-bottom: 20px;">
+            <strong th:text="#{common.error}">Error:</strong> <span x-text="stripeError"></span>
+            <button @click="clearStripeError()" style="float: right; background: none; border: none; color: #721c24; cursor: pointer; font-size: 1.2em; line-height: 1;">&times;</button>
+        </div>
 
         <!-- Not Connected State -->
         <div th:if="${stripeStatus == 'NOT_CONNECTED'}" class="stripe-status not-connected">

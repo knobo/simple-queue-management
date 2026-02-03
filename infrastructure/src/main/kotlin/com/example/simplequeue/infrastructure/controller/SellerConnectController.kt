@@ -2,6 +2,7 @@ package com.example.simplequeue.infrastructure.controller
 
 import com.example.simplequeue.domain.port.SellerPaymentGateway
 import com.example.simplequeue.domain.port.SellerRepository
+import com.stripe.exception.InvalidRequestException
 import com.stripe.exception.StripeException
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -71,6 +72,19 @@ class SellerConnectController(
                     onboardingUrl = accountLinkUrl,
                 )
             )
+        } catch (e: InvalidRequestException) {
+            // This typically happens when Stripe Connect is not enabled on the platform account
+            logger.error("Stripe Connect configuration error for seller {}: {}", seller.id, e.message, e)
+            val errorMessage = when {
+                e.message?.contains("You can only create new accounts if you've signed up for Connect") == true ->
+                    "Stripe Connect is not enabled for this platform. Please contact the administrator."
+                e.message?.contains("country") == true ->
+                    "Invalid country code. Please contact support."
+                else ->
+                    "Payment provider configuration error: ${e.message}"
+            }
+            ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(OnboardingStartResponse("", "", error = errorMessage))
         } catch (e: StripeException) {
             logger.error("Stripe error during onboarding for seller {}: {}", seller.id, e.message, e)
             ResponseEntity.status(HttpStatus.BAD_GATEWAY)
@@ -226,6 +240,17 @@ class SellerConnectController(
                     onboardingUrl = accountLinkUrl,
                 )
             )
+        } catch (e: InvalidRequestException) {
+            // This typically happens when Stripe Connect is not enabled on the platform account
+            logger.error("Stripe Connect configuration error refreshing link for seller {}: {}", seller.id, e.message, e)
+            val errorMessage = when {
+                e.message?.contains("You can only create new accounts if you've signed up for Connect") == true ->
+                    "Stripe Connect is not enabled for this platform. Please contact the administrator."
+                else ->
+                    "Payment provider configuration error: ${e.message}"
+            }
+            ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(OnboardingStartResponse("", "", error = errorMessage))
         } catch (e: StripeException) {
             logger.error("Stripe error refreshing link for seller {}: {}", seller.id, e.message, e)
             ResponseEntity.status(HttpStatus.BAD_GATEWAY)
