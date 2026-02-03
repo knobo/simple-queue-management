@@ -21,6 +21,21 @@
         .logout-btn { background: none; border: none; cursor: pointer; font-size: 1.2em; opacity: 0.6; padding: 5px; }
         .logout-btn:hover { opacity: 1; }
         .selected-mode { background: #e7f3ff; border-color: #007bff !important; }
+    
+        /* Mobile responsive styles */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .container { padding: 0 5px; max-width: 100%; }
+            .header { flex-direction: column; align-items: flex-start; gap: 15px; }
+            .header h1 { font-size: 1.4em; }
+            .header-actions { flex-wrap: wrap; gap: 8px; width: 100%; }
+            .btn { min-height: 44px; padding: 10px 16px; }
+            .card { padding: 15px; }
+            table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            th, td { padding: 8px 10px; font-size: 0.9em; }
+            input, select, textarea { font-size: 16px; }
+        }
+
     </style>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
 
@@ -384,6 +399,21 @@
         .badge-warning { background: #fff3cd; color: #856404; }
         .badge-secondary { background: #e2e3e5; color: #383d41; }
         .badge-primary { background: #cce5ff; color: #004085; }
+    
+        /* Mobile responsive styles */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .container { padding: 0 5px; max-width: 100%; }
+            .header { flex-direction: column; align-items: flex-start; gap: 15px; }
+            .header h1 { font-size: 1.4em; }
+            .header-actions { flex-wrap: wrap; gap: 8px; width: 100%; }
+            .btn { min-height: 44px; padding: 10px 16px; }
+            .card { padding: 15px; }
+            table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            th, td { padding: 8px 10px; font-size: 0.9em; }
+            input, select, textarea { font-size: 16px; }
+        }
+
     </style>
 
     <div class="queue-card">
