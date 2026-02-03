@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <title th:text="#{seller.dashboard.title} + ' - Simple Queue'">Seller Dashboard - Simple Queue</title>
     <style>
@@ -67,8 +69,18 @@
         .alert-info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
 
         @media (max-width: 768px) {
+            body { padding: 10px; }
+            .header { flex-direction: column; align-items: flex-start; gap: 15px; }
+            .header h1 { font-size: 1.4em; }
+            .header-actions { flex-wrap: wrap; gap: 8px; width: 100%; }
+            .header-actions .btn, .header-actions a.btn { padding: 10px 14px; font-size: 0.85em; }
             .stats-grid { grid-template-columns: 1fr 1fr; }
             .stripe-status { flex-direction: column; text-align: center; }
+            .card { padding: 15px; }
+            .btn { min-height: 44px; }
+            .referral-link-box { flex-direction: column; }
+            .referral-link-box input { width: 100%; }
+            table { display: block; overflow-x: auto; }
         }
     </style>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
