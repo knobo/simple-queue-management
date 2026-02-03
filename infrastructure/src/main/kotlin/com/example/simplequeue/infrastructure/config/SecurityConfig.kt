@@ -47,10 +47,15 @@ open class SecurityConfig(
                         org.springframework.http.HttpMethod.POST,
                         "/api/invites/{token}/decline"
                     ).permitAll()
-                    // Stripe webhook - must be accessible without auth (verified by signature)
+                    // Stripe webhooks - must be accessible without auth (verified by signature)
                     .requestMatchers(
                         org.springframework.http.HttpMethod.POST,
                         "/api/stripe/webhook"
+                    ).permitAll()
+                    // Stripe Connect webhooks - must be accessible without auth (verified by signature)
+                    .requestMatchers(
+                        org.springframework.http.HttpMethod.POST,
+                        "/webhook/connect"
                     ).permitAll()
                     .anyRequest().authenticated()
             }

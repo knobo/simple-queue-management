@@ -71,6 +71,8 @@ stripe:
   webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
   connect:
     webhook-secret: ${STRIPE_CONNECT_WEBHOOK_SECRET:}
+    default-country: ${STRIPE_CONNECT_DEFAULT_COUNTRY:NO}
+    supported-countries: ${STRIPE_CONNECT_SUPPORTED_COUNTRIES:NO,SE,DK,FI,DE,GB,US}
   prices:
     starter: ${STRIPE_PRICE_STARTER:price_1SvabCJpRTNhfgZpd1R2of7C}
     pro: ${STRIPE_PRICE_PRO:price_1SvabYJpRTNhfgZp194NchTA}

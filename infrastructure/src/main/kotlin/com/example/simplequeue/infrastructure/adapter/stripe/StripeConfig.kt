@@ -25,7 +25,22 @@ data class StripeProperties(
 @ConfigurationProperties(prefix = "stripe.connect")
 data class StripeConnectProperties(
     val webhookSecret: String = "",
-)
+    val defaultCountry: String = "NO",
+    val supportedCountries: String = "NO,SE,DK,FI,DE,GB,US",
+) {
+    /**
+     * Get the list of supported country codes for Stripe Connect.
+     * Stripe requires 2-letter ISO country codes.
+     */
+    fun getSupportedCountriesList(): List<String> = 
+        supportedCountries.split(",").map { it.trim().uppercase() }
+    
+    /**
+     * Check if a country is supported for Stripe Connect.
+     */
+    fun isCountrySupported(countryCode: String): Boolean =
+        countryCode.uppercase() in getSupportedCountriesList()
+}
 
 // Alias for backward compatibility
 typealias StripeConfig = StripeProperties

@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <title th:text="${success} ? 'Stripe Connect - Fullført' : 'Stripe Connect - Prøv igjen'">Stripe Connect - Simple Queue</title>
+    <title th:text="${success} ? #{seller.connect.result.title.success} : #{seller.connect.result.title.error}">Stripe Connect - Simple Queue</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 40px; text-align: center; background-color: #f8f9fa; color: #333; }
@@ -25,23 +25,21 @@
         <!-- Success state -->
         <div th:if="${success}">
             <div class="icon">✅</div>
-            <h1 class="success">Stripe Connect oppdatert!</h1>
-            <p th:text="${message}">Din Stripe-konto er oppdatert.</p>
-            <a href="/dashboard" class="btn btn-success">Gå til dashboard</a>
+            <h1 class="success" th:text="#{seller.connect.result.success.heading}">Stripe Account Connected!</h1>
+            <p th:text="${message} ?: #{seller.connect.result.success.message}">Your Stripe account has been successfully connected.</p>
+            <a href="/seller/dashboard" class="btn btn-success" th:text="#{seller.connect.result.backToDashboard}">Go to Dashboard</a>
         </div>
 
         <!-- Refresh/retry state -->
         <div th:unless="${success}">
             <div class="icon">⚠️</div>
-            <h1 class="warning">Onboarding avbrutt</h1>
-            <p th:text="${message}">Noe gikk galt under onboarding-prosessen.</p>
+            <h1 class="warning" th:text="#{seller.connect.result.error.heading}">Setup Interrupted</h1>
+            <p th:text="${message} ?: #{seller.connect.result.error.message}">Something went wrong during the onboarding process.</p>
             
             <div th:if="${showRetryButton}">
-                <p>Klikk knappen nedenfor for å generere en ny onboarding-lenke.</p>
-                <form action="/api/seller/connect/refresh-link" method="post" style="display: inline;">
-                    <button type="button" class="btn" onclick="retryOnboarding()">Prøv igjen</button>
-                </form>
-                <a href="/dashboard" class="btn btn-secondary">Gå til dashboard</a>
+                <p th:text="#{seller.connect.result.retry.instruction}">Click the button below to generate a new onboarding link.</p>
+                <button type="button" class="btn" onclick="retryOnboarding()" th:text="#{seller.connect.result.retry.button}">Try Again</button>
+                <a href="/seller/dashboard" class="btn btn-secondary" th:text="#{seller.connect.result.backToDashboard}">Go to Dashboard</a>
             </div>
         </div>
     </div>
@@ -60,11 +58,11 @@
                     const data = await response.json();
                     window.location.href = data.onboardingUrl;
                 } else {
-                    alert('Kunne ikke generere ny lenke. Prøv igjen senere.');
+                    alert('Could not generate new link. Please try again later.');
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Noe gikk galt. Prøv igjen senere.');
+                alert('Something went wrong. Please try again later.');
             }
         }
     </script>
