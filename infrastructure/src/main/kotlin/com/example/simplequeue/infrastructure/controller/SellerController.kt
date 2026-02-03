@@ -7,6 +7,7 @@ import com.example.simplequeue.domain.model.Seller
 import com.example.simplequeue.domain.model.SellerReferral
 import com.example.simplequeue.domain.port.OrganizationRepository
 import com.example.simplequeue.domain.port.SellerRepository
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
@@ -26,6 +27,7 @@ class SellerController(
     private val organizationRepository: OrganizationRepository,
     private val getSellerDashboardUseCase: GetSellerDashboardUseCase,
     private val createOrganizationUseCase: CreateOrganizationUseCase,
+    @Value("\${app.base-url:https://simplequeue.no}") private val baseUrl: String,
 ) {
     /**
      * Get the current seller's profile.
@@ -101,8 +103,6 @@ class SellerController(
         val seller = sellerRepository.findByUserId(userId)
             ?: return ResponseEntity.notFound().build()
 
-        // TODO: Make base URL configurable
-        val baseUrl = "https://simplequeue.no"
         val referralLink = "$baseUrl/signup?ref=${seller.referralCode}"
 
         return ResponseEntity.ok(

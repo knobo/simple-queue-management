@@ -1,6 +1,7 @@
 package com.example.simplequeue.infrastructure.config
 
 import com.example.simplequeue.application.service.ReferralService
+import com.example.simplequeue.domain.port.SellerRepository
 import com.example.simplequeue.infrastructure.filter.ReferralCookieFilter
 import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletRequest
@@ -24,6 +25,7 @@ import org.springframework.stereotype.Component
 @Component
 class LoginSuccessHandler(
     private val referralService: ReferralService,
+    private val sellerRepository: SellerRepository,
 ) : AuthenticationSuccessHandler {
 
     private val logger = LoggerFactory.getLogger(LoginSuccessHandler::class.java)
@@ -42,13 +44,17 @@ class LoginSuccessHandler(
         // Process referral code if present in cookie
         processReferralCookie(request, response, userId)
 
+        // Check if user has seller status in database
+        val isSellerInDb = sellerRepository.findByUserId(userId) != null
+
         val redirectUrl = when {
             roles.any { it.equals("ROLE_SUPERADMIN", ignoreCase = true) || it.equals("ROLE_superadmin", ignoreCase = true) } -> {
                 logger.info("Redirecting SUPERADMIN to /admin/sales")
                 "/admin/sales"
             }
-            roles.any { it.equals("ROLE_SELLER", ignoreCase = true) || it.equals("ROLE_seller", ignoreCase = true) } -> {
-                logger.info("Redirecting SELLER to /seller/dashboard")
+            roles.any { it.equals("ROLE_SELLER", ignoreCase = true) || it.equals("ROLE_seller", ignoreCase = true) } || isSellerInDb -> {
+                val hasRole = roles.any { it.equals("ROLE_SELLER", ignoreCase = true) || it.equals("ROLE_seller", ignoreCase = true) }
+                logger.info("Redirecting SELLER (hasRole=$hasRole, inDb=$isSellerInDb) to /seller/dashboard")
                 "/seller/dashboard"
             }
             else -> {
