@@ -1,75 +1,163 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <!--
-  Language selector fragment.
+  Language selector fragment - dropdown menu version.
   Include in templates with: <div th:replace="~{fragments/language-selector :: selector}"></div>
+  And script with: <script th:replace="~{fragments/language-selector :: script}"></script>
 -->
 
-<!-- Language selector with all supported languages -->
-<div th:fragment="selector" class="language-selector">
-    <a th:href="@{''(lang='en')}" th:classappend="${#locale.language == 'en' ? 'active' : ''}" 
-       onclick="saveLanguagePreference('en')" title="English">🇬🇧</a>
-    <a th:href="@{''(lang='no')}" th:classappend="${#locale.language == 'no' ? 'active' : ''}" 
-       onclick="saveLanguagePreference('no')" title="Norsk">🇳🇴</a>
-    <a th:href="@{''(lang='de')}" th:classappend="${#locale.language == 'de' ? 'active' : ''}" 
-       onclick="saveLanguagePreference('de')" title="Deutsch">🇩🇪</a>
-    <a th:href="@{''(lang='es')}" th:classappend="${#locale.language == 'es' ? 'active' : ''}" 
-       onclick="saveLanguagePreference('es')" title="Español">🇪🇸</a>
-    <a th:href="@{''(lang='fr')}" th:classappend="${#locale.language == 'fr' ? 'active' : ''}" 
-       onclick="saveLanguagePreference('fr')" title="Français">🇫🇷</a>
-    <a th:href="@{''(lang='it')}" th:classappend="${#locale.language == 'it' ? 'active' : ''}" 
-       onclick="saveLanguagePreference('it')" title="Italiano">🇮🇹</a>
-    <a th:href="@{''(lang='ja')}" th:classappend="${#locale.language == 'ja' ? 'active' : ''}" 
-       onclick="saveLanguagePreference('ja')" title="日本語">🇯🇵</a>
-    <a th:href="@{''(lang='pl')}" th:classappend="${#locale.language == 'pl' ? 'active' : ''}" 
-       onclick="saveLanguagePreference('pl')" title="Polski">🇵🇱</a>
-    <a th:href="@{''(lang='pt')}" th:classappend="${#locale.language == 'pt' ? 'active' : ''}" 
-       onclick="saveLanguagePreference('pt')" title="Português">🇧🇷</a>
+<!-- Language selector dropdown (includes inline styles) -->
+<div th:fragment="selector" class="language-dropdown">
+    <style>
+        .language-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .language-toggle {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 12px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2em;
+            min-height: 44px;
+            min-width: 44px;
+            transition: all 0.2s;
+        }
+        .language-toggle:hover {
+            background: #f8f9fa;
+            border-color: #ccc;
+        }
+        .dropdown-arrow {
+            font-size: 0.6em;
+            color: #666;
+            transition: transform 0.2s;
+        }
+        .language-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 4px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            min-width: 160px;
+            z-index: 1000;
+            overflow: hidden;
+        }
+        .language-menu.open {
+            display: block;
+            animation: dropdownFadeIn 0.15s ease;
+        }
+        @keyframes dropdownFadeIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .language-menu a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            color: #333;
+            text-decoration: none;
+            font-size: 0.95em;
+            transition: background 0.15s;
+        }
+        .language-menu a:hover {
+            background: #f8f9fa;
+        }
+        .language-menu a.active {
+            background: #e3f2fd;
+            font-weight: 500;
+        }
+        .language-menu a .flag {
+            font-size: 1.2em;
+        }
+        @media (max-width: 480px) {
+            .language-menu {
+                position: fixed;
+                top: auto;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                margin: 0;
+                border-radius: 16px 16px 0 0;
+                max-height: 60vh;
+                overflow-y: auto;
+            }
+            .language-menu a {
+                padding: 16px 20px;
+                font-size: 1em;
+            }
+            .language-menu-backdrop {
+                display: block;
+            }
+        }
+    </style>
+    <button class="language-toggle" onclick="toggleLanguageMenu(event)" aria-label="Select language">
+        <span class="current-flag" th:switch="${#locale.language}">
+            <span th:case="'en'">🇬🇧</span>
+            <span th:case="'no'">🇳🇴</span>
+            <span th:case="'de'">🇩🇪</span>
+            <span th:case="'es'">🇪🇸</span>
+            <span th:case="'fr'">🇫🇷</span>
+            <span th:case="'it'">🇮🇹</span>
+            <span th:case="'ja'">🇯🇵</span>
+            <span th:case="'pl'">🇵🇱</span>
+            <span th:case="'pt'">🇧🇷</span>
+            <span th:case="*">🌐</span>
+        </span>
+        <span class="dropdown-arrow">▼</span>
+    </button>
+    <div class="language-menu" id="languageMenu">
+        <a th:href="@{''(lang='en')}" th:classappend="${#locale.language == 'en' ? 'active' : ''}" 
+           onclick="saveLanguagePreference('en')"><span class="flag">🇬🇧</span> English</a>
+        <a th:href="@{''(lang='no')}" th:classappend="${#locale.language == 'no' ? 'active' : ''}" 
+           onclick="saveLanguagePreference('no')"><span class="flag">🇳🇴</span> Norsk</a>
+        <a th:href="@{''(lang='de')}" th:classappend="${#locale.language == 'de' ? 'active' : ''}" 
+           onclick="saveLanguagePreference('de')"><span class="flag">🇩🇪</span> Deutsch</a>
+        <a th:href="@{''(lang='es')}" th:classappend="${#locale.language == 'es' ? 'active' : ''}" 
+           onclick="saveLanguagePreference('es')"><span class="flag">🇪🇸</span> Español</a>
+        <a th:href="@{''(lang='fr')}" th:classappend="${#locale.language == 'fr' ? 'active' : ''}" 
+           onclick="saveLanguagePreference('fr')"><span class="flag">🇫🇷</span> Français</a>
+        <a th:href="@{''(lang='it')}" th:classappend="${#locale.language == 'it' ? 'active' : ''}" 
+           onclick="saveLanguagePreference('it')"><span class="flag">🇮🇹</span> Italiano</a>
+        <a th:href="@{''(lang='ja')}" th:classappend="${#locale.language == 'ja' ? 'active' : ''}" 
+           onclick="saveLanguagePreference('ja')"><span class="flag">🇯🇵</span> 日本語</a>
+        <a th:href="@{''(lang='pl')}" th:classappend="${#locale.language == 'pl' ? 'active' : ''}" 
+           onclick="saveLanguagePreference('pl')"><span class="flag">🇵🇱</span> Polski</a>
+        <a th:href="@{''(lang='pt')}" th:classappend="${#locale.language == 'pt' ? 'active' : ''}" 
+           onclick="saveLanguagePreference('pt')"><span class="flag">🇧🇷</span> Português</a>
+    </div>
 </div>
 
-<!-- JavaScript for saving language preference (include once per page) -->
+<!-- JavaScript for language selector -->
 <script th:fragment="script">
-/**
- * Save language preference to server if user is logged in.
- * The page will reload with the new language regardless.
- */
+function toggleLanguageMenu(e) {
+    e.stopPropagation();
+    const menu = document.getElementById('languageMenu');
+    menu.classList.toggle('open');
+}
+
+document.addEventListener('click', function(e) {
+    const menu = document.getElementById('languageMenu');
+    if (menu && !e.target.closest('.language-dropdown')) {
+        menu.classList.remove('open');
+    }
+});
+
 function saveLanguagePreference(lang) {
-    // Fire and forget - the page will reload anyway via the href
     fetch('/api/preferences/language', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ language: lang }),
-    }).catch(() => {
-        // Ignore errors - user might not be logged in, which is fine
-        // The cookie-based fallback will handle non-logged-in users
-    });
+    }).catch(() => {});
 }
 </script>
-
-<!-- CSS styles for language selector (include in your page styles) -->
-<style th:fragment="styles">
-.language-selector {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-}
-.language-selector a {
-    text-decoration: none;
-    font-size: 1.3em;
-    padding: 2px 4px;
-    border-radius: 4px;
-    opacity: 0.5;
-    transition: opacity 0.2s, transform 0.2s;
-}
-.language-selector a:hover {
-    opacity: 0.8;
-    transform: scale(1.1);
-}
-.language-selector a.active {
-    opacity: 1;
-}
-</style>
 
 </html>
