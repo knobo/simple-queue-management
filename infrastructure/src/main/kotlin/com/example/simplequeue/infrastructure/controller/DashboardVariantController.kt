@@ -98,4 +98,37 @@ class DashboardVariantController {
         logger.info("Serving dashboard-owner-variant3 (Visual Analytics)")
         return "dashboard-variants/dashboard-owner-variant3"
     }
+
+    /**
+     * Operator Dashboard Variant 1 - Touch-First Simple Design
+     * Accessible by: OPERATOR, OWNER, or SUPERADMIN
+     */
+    @GetMapping("/dashboard-operator-variant1")
+    @PreAuthorize("hasAnyRole('OPERATOR', 'OWNER', 'SUPERADMIN')")
+    fun dashboardOperatorVariant1(): String {
+        logger.info("Serving dashboard-operator-variant1 (Touch-First Simple)")
+        return "dashboard-variants/dashboard-operator-variant1"
+    }
+
+    /**
+     * Operator Dashboard Variant 2 - Split View Professional
+     * Accessible by: OPERATOR, OWNER, or SUPERADMIN
+     */
+    @GetMapping("/dashboard-operator-variant2")
+    @PreAuthorize("hasAnyRole('OPERATOR', 'OWNER', 'SUPERADMIN')")
+    fun dashboardOperatorVariant2(): String {
+        logger.info("Serving dashboard-operator-variant2 (Split View Professional)")
+        return "dashboard-variants/dashboard-operator-variant2"
+    }
+
+    /**
+     * Operator Dashboard Variant 3 - Kiosk Mode Full Screen
+     * Accessible by: OPERATOR, OWNER, or SUPERADMIN
+     */
+    @GetMapping("/dashboard-operator-variant3")
+    @PreAuthorize("hasAnyRole('OPERATOR', 'OWNER', 'SUPERADMIN')")
+    fun dashboardOperatorVariant3(): String {
+        logger.info("Serving dashboard-operator-variant3 (Kiosk Mode)")
+        return "dashboard-variants/dashboard-operator-variant3"
+    }
 }
