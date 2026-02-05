@@ -2,7 +2,7 @@
 
 *Service: management.knobo.no*  
 *Repository: simple-queue-management*  
-*Updated: 2026-02-03*
+*Updated: 2026-02-05*
 
 ---
 
@@ -31,52 +31,30 @@ Simple Queue Management is the **business operations microservice** responsible 
 
 ## System Architecture
 
+The application follows a strict **Hexagonal Architecture** enforced by Gradle modules:
+
+```mermaid
+graph TD
+    User[User / Admin] -->|HTTP/REST| API[Infrastructure: Controllers]
+    Stripe[Stripe API] -->|Webhooks| API
+    Core[Core Service] -->|Internal API| API
+    
+    subgraph "Management (Hexagon)"
+        API --> UC[Application: Use Cases]
+        UC --> Domain[Domain: Models & Logic]
+    end
+    
+    UC -->|Port| Repo[Persistence Port]
+    UC -->|Port| Pmt[Payment Port]
+    
+    Repo -->|Adapter| DB[(PostgreSQL)]
+    Pmt -->|Adapter| StripeSDK[Stripe SDK]
 ```
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                         Kubernetes Cluster (k3s)                                    │
-│                                                                                      │
-│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────────────────────┐ │
-│  │   Traefik       │    │   Keycloak      │    │   PostgreSQL                    │ │
-│  │   (Ingress)     │    │   login.knobo.no│    │   (shared database)             │ │
-│  │   traefik ns    │    │   (external)    │    │   queue namespace               │ │
-│  └────────┬────────┘    └────────┬────────┘    └────────┬─────────────────────────┘ │
-│           │                      │                      │                          │
-│           ▼                      ▼                      ▼                          │
-│  ┌─────────────────────────────────────────────────────────────────────────────┐  │
-│  │                  Simple Queue Management                                     │  │
-│  │                  management.knobo.no                                         │  │
-│  │                  (queue namespace)                                           │  │
-│  │                                                                              │  │
-│  │  ┌───────────────────────────────────────────────────────────────────────┐  │  │
-│  │  │                  Spring Boot 4 Application                             │  │  │
-│  │  │                                                                        │  │  │
-│  │  │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────┐   │  │  │
-│  │  │  │   Controllers   │  │    Services     │  │  Repositories       │   │  │  │
-│  │  │  │   (REST/Web)    │  │   (Use Cases)   │  │  (JDBC/Shared DB)   │   │  │  │
-│  │  │  └─────────────────┘  └─────────────────┘  └─────────────────────┘   │  │  │
-│  │  │                                                                        │  │  │
-│  │  │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────┐   │  │  │
-│  │  │  │   Thymeleaf     │  │   Stripe SDK    │  │   Internal API      │   │  │  │
-│  │  │  │   (Templates)   │  │   (Payments)    │  │   (For Core)        │   │  │  │
-│  │  │  └─────────────────┘  └─────────────────┘  └─────────────────────┘   │  │  │
-│  │  └───────────────────────────────────────────────────────────────────────┘  │  │
-│  └────────────────────────────────┬───────────────────────────────────────────┘  │
-│                                   │                                               │
-│                                   │ HTTP (internal)                               │
-│                                   │                                               │
-│  ┌─────────────────────────────────────────────────────────────────────────────┐  │
-│  │                     Simple Queue Core                                        │  │
-│  │                     queue.knobo.no                                           │  │
-│  │                     (calls Management API)                                   │  │
-│  └─────────────────────────────────────────────────────────────────────────────┘  │
-│                                                                                      │
-│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────────────────────┐ │
-│  │   Stripe        │    │   Stripe        │    │   SMTP                          │ │
-│  │   (Payments)    │    │   Connect       │    │   (Email receipts)              │ │
-│  │   api.stripe.com│    │   (Marketplace) │    │   10.0.0.1:25                   │ │
-│  └─────────────────┘    └─────────────────┘    └─────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────────────────────┘
-```
+
+### Module Structure
+- **`domain`**: Pure Kotlin business logic. Entities (`Subscription`, `Seller`, `Organization`), Value Objects (`CommissionRate`), and Port interfaces.
+- **`application`**: Use Cases (`CreateSellerUseCase`, `ProcessSubscriptionWebhook`) that orchestrate domain logic.
+- **`infrastructure`**: Spring Boot 3.3 application, Controllers, and Adapters (`JdbcRepository`, `StripeConnectAdapter`, `KeycloakAdapter`).
 
 ---
 
@@ -165,45 +143,6 @@ Implemented by `QueueCoreRedirectController`.
 
 ---
 
-## Service Boundaries Diagram
-
-```mermaid
-flowchart TB
-    subgraph Client["Client Browser"]
-        User[User]
-    end
-    
-    subgraph K8s["Kubernetes Cluster"]
-        subgraph QueueNS["queue namespace"]
-            Mgmt["Simple Queue Management<br/>management.knobo.no"]
-            Core["Simple Queue Core<br/>queue.knobo.no"]
-            DB[("PostgreSQL<br/>(Shared DB)")]
-        end
-        
-        subgraph TraefikNS["traefik namespace"]
-            Ingress[Traefik Ingress]
-        end
-    end
-    
-    subgraph External["External Services"]
-        Keycloak["Keycloak<br/>login.knobo.no"]
-        Stripe["Stripe<br/>Payments & Connect"]
-    end
-    
-    User -->|"HTTPS"| Ingress
-    Ingress -->|"/subscription, /seller"| Mgmt
-    Ingress -->|"/dashboard, /queue, /q"| Core
-    
-    Mgmt <-->|"SQL (Shared)"| DB
-    Core <-->|"SQL (Shared)"| DB
-    Core <-->|"HTTP Internal API"| Mgmt
-    
-    Mgmt <-->|"REST API + Webhooks"| Stripe
-    Mgmt -->|"REST API"| Keycloak
-```
-
----
-
 ## Data Flow: Subscription Creation
 
 ```mermaid
@@ -261,74 +200,6 @@ sequenceDiagram
     
     Stripe-->>M: Webhook: account.updated
     M->>DB: UPDATE sellers SET charges_enabled, payouts_enabled
-```
-
----
-
-## Data Flow: Core Quota Check
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Core as Core Service
-    participant M as Management Service
-    participant DB as PostgreSQL
-
-    Core->>M: GET /api/internal/subscription/{userId}/can-create-queue?currentQueueCount=2
-    M->>DB: SELECT subscriptions WHERE user_id = ?
-    DB-->>M: Subscription record (tier: STARTER)
-    M->>DB: SELECT tier_limits WHERE tier = 'STARTER'
-    DB-->>M: Tier limits (max_queues: 3)
-    M->>M: Compare: 2 < 3 → true
-    M-->>Core: 200 OK (true)
-```
-
----
-
-## Hexagonal Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              INFRASTRUCTURE                                  │
-│  ┌───────────────────────────────────────────────────────────────────────┐   │
-│  │                                                                        │   │
-│  │   Controllers        Repositories        Config          Adapters      │   │
-│  │   ───────────        ────────────        ──────          ────────      │   │
-│  │   REST API          JDBC (PostgreSQL)   SecurityConfig   Stripe SDK   │   │
-│  │   Web (Thymeleaf)   SubscriptionRepo    StripeConfig     Keycloak     │   │
-│  │   Internal API      SellerRepository    JacksonConfig                  │   │
-│  │   Webhooks          TierLimitRepo       LocaleConfig                   │   │
-│  │                                                                        │   │
-│  └───────────────────────────────┬───────────────────────────────────────┘   │
-│                                  │  depends on                               │
-│  ┌───────────────────────────────▼───────────────────────────────────────┐   │
-│  │                             APPLICATION                                │   │
-│  │                                                                        │   │
-│  │   Use Cases                      Services                    DTOs      │   │
-│  │   ─────────                      ────────                    ────      │   │
-│  │   CreateSellerUseCase           SubscriptionService         Request    │   │
-│  │   CreateOrganizationUseCase     ReferralService             Response   │   │
-│  │   GetSellerDashboardUseCase     CommissionService                      │   │
-│  │                                StripeConnectAdapter                    │   │
-│  │                                                                        │   │
-│  └───────────────────────────────┬───────────────────────────────────────┘   │
-│                                  │  depends on                               │
-│  ┌───────────────────────────────▼───────────────────────────────────────┐   │
-│  │                               DOMAIN                                   │   │
-│  │                                                                        │   │
-│  │   Entities              Ports                     Value Objects        │   │
-│  │   ────────              ─────                     ─────────────        │   │
-│  │   Subscription          SubscriptionRepository    SubscriptionTier     │   │
-│  │   Seller                SellerRepository          PayoutStatus         │   │
-│  │   Organization          TierLimitRepository       CommissionRate       │   │
-│  │   TierLimit                                                            │   │
-│  │   CommissionEntry                                                      │   │
-│  │                                                                        │   │
-│  └───────────────────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────────────────┘
-
-Dependencies point INWARD: Infrastructure → Application → Domain
-Domain has NO external dependencies.
 ```
 
 ---
@@ -512,72 +383,3 @@ Tier limits are configurable by superadmin via `/admin/tier-limits`.
 - `GET /dashboard` → Core service
 - `GET /queue/{queueId}/**` → Core service
 - `GET /q/**` → Core service
-
----
-
-## Local Development
-
-### Prerequisites
-- Java 21 (Temurin)
-- Docker (for PostgreSQL)
-- Stripe CLI (for webhook testing)
-- Access to Keycloak dev realm
-
-### Start Dependencies
-```bash
-docker-compose up -d postgres
-```
-
-### Run Stripe CLI for Webhooks
-```bash
-stripe listen --forward-to localhost:8080/webhooks/stripe
-stripe listen --forward-to localhost:8080/webhooks/stripe-connect
-```
-
-### Run Application
-```bash
-export KEYCLOAK_AUTH_SERVER_URL=https://login.knobo.no
-export KEYCLOAK_REALM=simple-queue
-export KEYCLOAK_CLIENT_ID=web
-export KEYCLOAK_CLIENT_SECRET=xxx
-export DATABASE_PASSWORD=xxx
-export STRIPE_SECRET_KEY=sk_test_xxx
-export STRIPE_WEBHOOK_SECRET=whsec_xxx
-
-./gradlew :infrastructure:bootRun
-```
-
----
-
-## Future Architecture
-
-### Planned Changes
-
-1. **Database Separation**
-   - Management: Own database for subscriptions, sellers, organizations
-   - Core: Own database for queues, tickets, counters
-   - API-based synchronization for quota enforcement
-
-2. **Event-Driven Architecture**
-   - Management publishes: `SubscriptionChanged`, `SellerOnboarded`
-   - Core subscribes and maintains local quota cache
-   - Reduces synchronous API calls
-
-3. **Enhanced Security**
-   - Internal API authentication (mTLS or API keys)
-   - Rate limiting on internal endpoints
-
----
-
-## Related Documentation
-
-| Document | Location |
-|----------|----------|
-| Core Service | `../simple-queue-core/ARCHITECTURE.md` |
-| Test Plan | `TEST-PLAN.md` |
-| Staging Guide | `STAGING.md` |
-| MVP Tasks | `MVP-TASKS.md` |
-
----
-
-*Questions? Ping Astra 🛡️*
