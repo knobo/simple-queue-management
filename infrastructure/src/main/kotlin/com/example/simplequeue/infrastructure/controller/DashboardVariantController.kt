@@ -65,4 +65,37 @@ class DashboardVariantController {
         logger.info("Serving dashboard-variant4 for superadmin")
         return "dashboard-variants/dashboard-variant4"
     }
+
+    /**
+     * Owner Dashboard Variant 1 - Modern Card-Based Design
+     * Accessible by: OWNER, SELLER, or SUPERADMIN
+     */
+    @GetMapping("/dashboard-owner-variant1")
+    @PreAuthorize("hasAnyRole('OWNER', 'SELLER', 'SUPERADMIN')")
+    fun dashboardOwnerVariant1(): String {
+        logger.info("Serving dashboard-owner-variant1 (Modern Card-Based)")
+        return "dashboard-variants/dashboard-owner-variant1"
+    }
+
+    /**
+     * Owner Dashboard Variant 2 - Compact List View Design
+     * Accessible by: OWNER, SELLER, or SUPERADMIN
+     */
+    @GetMapping("/dashboard-owner-variant2")
+    @PreAuthorize("hasAnyRole('OWNER', 'SELLER', 'SUPERADMIN')")
+    fun dashboardOwnerVariant2(): String {
+        logger.info("Serving dashboard-owner-variant2 (Compact List View)")
+        return "dashboard-variants/dashboard-owner-variant2"
+    }
+
+    /**
+     * Owner Dashboard Variant 3 - Visual Analytics Design
+     * Accessible by: OWNER, SELLER, or SUPERADMIN
+     */
+    @GetMapping("/dashboard-owner-variant3")
+    @PreAuthorize("hasAnyRole('OWNER', 'SELLER', 'SUPERADMIN')")
+    fun dashboardOwnerVariant3(): String {
+        logger.info("Serving dashboard-owner-variant3 (Visual Analytics)")
+        return "dashboard-variants/dashboard-owner-variant3"
+    }
 }
