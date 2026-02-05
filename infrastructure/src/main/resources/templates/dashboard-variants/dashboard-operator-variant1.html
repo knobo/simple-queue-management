@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="no" x-data="operatorDashboard()">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Operatør Dashboard - Simple Queue</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        
+        * {
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: #0f172a;
+            color: #e2e8f0;
+            overflow: hidden;
+        }
+        
+        /* Touch-friendly large buttons */
+        .btn-touch {
+            min-height: 80px;
+            min-width: 80px;
+            font-size: 1.25rem;
+            font-weight: 600;
+            border-radius: 16px;
+            transition: all 0.15s ease;
+            user-select: none;
+        }
+        
+        .btn-touch:active {
+            transform: scale(0.96);
+        }
+        
+        .btn-next {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            box-shadow: 0 8px 32px rgba(16, 185, 129, 0.4);
+        }
+        
+        .btn-next:hover {
+            box-shadow: 0 12px 48px rgba(16, 185, 129, 0.5);
+        }
+        
+        .btn-pause {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            box-shadow: 0 8px 32px rgba(245, 158, 11, 0.4);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+        
+        .btn-secondary {
+            background: #334155;
+            border: 2px solid #475569;
+        }
+        
+        /* Status indicators */
+        .status-active {
+            background: #10b981;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+        }
+        
+        .status-paused {
+            background: #f59e0b;
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.5);
+        }
+        
+        .status-closed {
+            background: #ef4444;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+        }
+        
+        /* Current customer card */
+        .current-card {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border: 2px solid #334155;
+            border-radius: 24px;
+        }
+        
+        .current-card.active {
+            border-color: #10b981;
+            box-shadow: 0 0 40px rgba(16, 185, 129, 0.2);
+        }
+        
+        /* Queue list items */
+        .queue-item {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+        }
+        
+        .queue-item:hover {
+            background: #252f47;
+            transform: translateX(4px);
+        }
+        
+        /* Fullscreen button */
+        .fullscreen-btn {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 50;
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: #1e293b;
+            border: 2px solid #334155;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .fullscreen-btn:hover {
+            background: #334155;
+            color: #e2e8f0;
+        }
+        
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: #10b981;
+            color: white;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            z-index: 1000;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+        
+        .toast.error {
+            background: #ef4444;
+        }
+        
+        /* Stats cards */
+        .stat-card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #f8fafc;
+        }
+        
+        .stat-label {
+            font-size: 0.875rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        /* Transfer modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+        
+        .modal-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        .modal-content {
+            background: #1e293b;
+            border-radius: 24px;
+            padding: 24px;
+            width: 90%;
+            max-width: 400px;
+            transform: scale(0.9);
+            transition: transform 0.2s ease;
+        }
+        
+        .modal-overlay.open .modal-content {
+            transform: scale(1);
+        }
+        
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #64748b;
+        }
+        
+        /* Ticket number display */
+        .ticket-number {
+            font-size: 4rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #f8fafc 0%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        @media (max-width: 640px) {
+            .btn-touch {
+                min-height: 72px;
+                font-size: 1.1rem;
+            }
+            
+            .ticket-number {
+                font-size: 3rem;
+            }
+            
+            .stat-value {
+                font-size: 1.5rem;
+            }
+        }
+        
+        /* Pulse animation for active status */
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            100% { transform: scale(1.3); opacity: 0; }
+        }
+        
+        .pulse-ring {
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            background: inherit;
+            animation: pulse-ring 2s ease-out infinite;
+            z-index: -1;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col">
+    <!-- Fullscreen Toggle -->
+    <button class="fullscreen-btn" @click="toggleFullscreen()" title="Fullskjerm">
+        <i class="fas fa-expand text-xl" x-show="!isFullscreen"></i>
+        <i class="fas fa-compress text-xl" x-show="isFullscreen"></i>
+    </button>
+
+    <!-- Toast Notification -->
+    <div class="toast" :class="{ 'show': toast.show, 'error': toast.error }" x-text="toast.message"></div>
+
+    <!-- Transfer Modal -->
+    <div class="modal-overlay" :class="{ 'open': showTransferModal }" @click="showTransferModal = false">
+        <div class="modal-content" @click.stop>
+            <h3 class="text-xl font-bold mb-4">Overfør kunde</h3>
+            <p class="text-gray-400 mb-4">Velg skranke å overføre til:</p>
+            <div class="space-y-2">
+                <template x-for="counter in availableCounters" :key="counter.id">
+                    <button 
+                        @click="transferToCounter(counter.id)"
+                        class="w-full p-4 bg-slate-700 hover:bg-slate-600 rounded-xl text-left flex items-center justify-between transition-colors">
+                        <span x-text="counter.name"></span>
+                        <i class="fas fa-arrow-right text-gray-400"></i>
+                    </button>
+                </template>
+            </div>
+            <button @click="showTransferModal = false" class="w-full mt-4 p-4 bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors">
+                Avbryt
+            </button>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="flex items-center justify-between px-6 py-4 bg-slate-900 border-b border-slate-800">
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl">
+                SQ
+            </div>
+            <div>
+                <h1 class="font-bold text-lg">Operatør</h1>
+                <p class="text-sm text-gray-400" x-text="queueName">Hovedkø</p>
+            </div>
+        </div>
+        
+        <!-- Status Indicator -->
+        <div class="flex items-center gap-3">
+            <span class="text-sm text-gray-400 hidden sm:inline">Status:</span>
+            <button 
+                @click="cycleStatus()"
+                class="flex items-center gap-2 px-4 py-2 rounded-full font-semibold text-sm transition-all"
+                :class="{
+                    'bg-emerald-500/20 text-emerald-400': status === 'ACTIVE',
+                    'bg-amber-500/20 text-amber-400': status === 'PAUSED',
+                    'bg-red-500/20 text-red-400': status === 'CLOSED'
+                }">
+                <span class="relative flex h-3 w-3">
+                    <span class="pulse-ring" x-show="status === 'ACTIVE'"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3"
+                        :class="{
+                            'bg-emerald-400': status === 'ACTIVE',
+                            'bg-amber-400': status === 'PAUSED',
+                            'bg-red-400': status === 'CLOSED'
+                        }"></span>
+                </span>
+                <span x-text="statusText"></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        
+        <!-- Left Panel: Current Customer & Controls -->
+        <section class="flex-1 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 overflow-y-auto">
+            
+            <!-- Current Customer Card -->
+            <div class="current-card p-6 lg:p-8" :class="{ 'active': currentCustomer }">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-gray-400 font-medium uppercase tracking-wider text-sm">Nåværende kunde</span>
+                    <span x-show="currentCustomer" class="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-full text-sm font-semibold">
+                        Betjener
+                    </span>
+                </div>
+                
+                <div x-show="currentCustomer" class="text-center py-4">
+                    <div class="ticket-number" x-text="currentCustomer?.number">A-42</div>
+                    <p class="text-xl text-gray-300 mt-2" x-text="currentCustomer?.name">Ola Nordmann</p>
+                    <p class="text-sm text-gray-500 mt-1">
+                        Venter fra <span x-text="currentCustomer?.waitTime">12:34</span>
+                    </p>
+                </div>
+                
+                <div x-show="!currentCustomer" class="empty-state">
+                    <i class="fas fa-user-slash text-5xl mb-4 opacity-50"></i>
+                    <p class="text-lg">Ingen kunde betjenes</p>
+                    <p class="text-sm mt-1">Trykk "Neste kunde" for å starte</p>
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="grid grid-cols-3 gap-3 lg:gap-4">
+                <div class="stat-card">
+                    <div class="stat-value text-emerald-400" x-text="stats.servedToday">24</div>
+                    <div class="stat-label">Betjent i dag</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value text-blue-400" x-text="stats.avgTime">8m</div>
+                    <div class="stat-label">Snitt tid</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value text-amber-400" x-text="queue.length">5</div>
+                    <div class="stat-label">Venter</div>
+                </div>
+            </div>
+
+            <!-- Main Action Buttons -->
+            <div class="flex gap-3 lg:gap-4">
+                <button 
+                    @click="callNext()"
+                    :disabled="status === 'CLOSED' || queue.length === 0"
+                    class="btn-touch btn-next flex-1 flex items-center justify-center gap-3 text-white disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fas fa-arrow-right text-2xl"></i>
+                    <span>Neste kunde</span>
+                </button>
+                
+                <button 
+                    @click="togglePause()"
+                    class="btn-touch btn-pause w-24 lg:w-32 flex items-center justify-center text-white"
+                    :class="{ 'opacity-50': status !== 'PAUSED' }">
+                    <i class="fas" :class="status === 'PAUSED' ? 'fa-play' : 'fa-pause'"></i>
+                </button>
+            </div>
+
+            <!-- Secondary Actions -->
+            <div class="flex gap-3">
+                <button 
+                    @click="completeCurrent()"
+                    :disabled="!currentCustomer"
+                    class="btn-touch btn-secondary flex-1 flex items-center justify-center gap-2 text-gray-300 disabled:opacity-50">
+                    <i class="fas fa-check text-emerald-400"></i>
+                    <span>Ferdig</span>
+                </button>
+                
+                <button 
+                    @click="showTransferModal = true"
+                    :disabled="!currentCustomer || availableCounters.length === 0"
+                    class="btn-touch btn-secondary flex-1 flex items-center justify-center gap-2 text-gray-300 disabled:opacity-50">
+                    <i class="fas fa-exchange-alt text-blue-400"></i>
+                    <span>Overfør</span>
+                </button>
+                
+                <button 
+                    @click="cancelCurrent()"
+                    :disabled="!currentCustomer"
+                    class="btn-touch btn-danger w-20 flex items-center justify-center text-white disabled:opacity-50">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Right Panel: Queue List -->
+        <aside class="lg:w-96 bg-slate-900 border-t lg:border-t-0 lg:border-l border-slate-800 flex flex-col">
+            <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+                <h2 class="font-bold text-lg flex items-center gap-2">
+                    <i class="fas fa-list text-gray-400"></i>
+                    Kø-liste
+                </h2>
+                <span class="px-3 py-1 bg-slate-800 rounded-full text-sm" x-text="queue.length + ' venter'">5 venter</span>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-4 space-y-3">
+                <template x-for="(ticket, index) in queue.slice(0, 5)" :key="ticket.id">
+                    <div class="queue-item p-4 flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center font-bold text-lg" 
+                             :class="index === 0 ? 'text-amber-400' : 'text-gray-400'"
+                             x-text="index + 1">1</div>
+                        <div class="flex-1">
+                            <div class="font-semibold text-lg" x-text="ticket.number">A-43</div>
+                            <div class="text-sm text-gray-400" x-text="ticket.name">Kari Hansen</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm text-gray-500" x-text="ticket.waitTime">5 min</div>
+                        </div>
+                    </div>
+                </template>
+                
+                <div x-show="queue.length === 0" class="empty-state">
+                    <i class="fas fa-inbox text-4xl mb-3 opacity-30"></i>
+                    <p>Ingen venter i kø</p>
+                </div>
+                
+                <div x-show="queue.length > 5" class="text-center py-3 text-gray-500 text-sm">
+                    ...og <span x-text="queue.length - 5"></span> til
+                </div>
+            </div>
+            
+            <!-- Sound Toggle -->
+            <div class="p-4 border-t border-slate-800 flex items-center justify-between">
+                <span class="text-sm text-gray-400">Lyd ved kall</span>
+                <button 
+                    @click="soundEnabled = !soundEnabled"
+                    class="w-12 h-6 rounded-full transition-colors relative"
+                    :class="soundEnabled ? 'bg-emerald-500' : 'bg-slate-700'">
+                    <span class="absolute top-1 w-4 h-4 rounded-full bg-white transition-all"
+                          :class="soundEnabled ? 'left-7' : 'left-1'"></span>
+                </button>
+            </div>
+        </aside>
+    </main>
+
+    <script>
+        function operatorDashboard() {
+            return {
+                // State
+                queueName: 'Hovedkø',
+                status: 'ACTIVE', // ACTIVE, PAUSED, CLOSED
+                currentCustomer: null,
+                queue: [
+                    { id: 1, number: 'A-43', name: 'Kari Hansen', waitTime: '5 min' },
+                    { id: 2, number: 'A-44', name: 'Per Johansen', waitTime: '8 min' },
+                    { id: 3, number: 'A-45', name: 'Marie Olsen', waitTime: '12 min' },
+                    { id: 4, number: 'A-46', name: 'Lars Andersen', waitTime: '15 min' },
+                    { id: 5, number: 'A-47', name: 'Ingrid Nilsson', waitTime: '18 min' },
+                ],
+                stats: {
+                    servedToday: 24,
+                    avgTime: '8m'
+                },
+                availableCounters: [
+                    { id: 2, name: 'Skranke B' },
+                    { id: 3, name: 'Skranke C' }
+                ],
+                soundEnabled: true,
+                isFullscreen: false,
+                showTransferModal: false,
+                toast: { show: false, message: '', error: false },
+                
+                // Computed
+                get statusText() {
+                    const map = {
+                        'ACTIVE': 'Aktiv',
+                        'PAUSED': 'Pause',
+                        'CLOSED': 'Stengt'
+                    };
+                    return map[this.status] || this.status;
+                },
+                
+                // Methods
+                init() {
+                    // Check fullscreen state
+                    this.isFullscreen = !!document.fullscreenElement;
+                    
+                    // Listen for fullscreen changes
+                    document.addEventListener('fullscreenchange', () => {
+                        this.isFullscreen = !!document.fullscreenElement;
+                    });
+                    
+                    // Load preferences
+                    const savedSound = localStorage.getItem('operatorSoundEnabled');
+                    if (savedSound !== null) {
+                        this.soundEnabled = savedSound === 'true';
+                    }
+                },
+                
+                toggleFullscreen() {
+                    if (!document.fullscreenElement) {
+                        document.documentElement.requestFullscreen().catch(() => {});
+                    } else {
+                        document.exitFullscreen().catch(() => {});
+                    }
+                },
+                
+                cycleStatus() {
+                    const states = ['ACTIVE', 'PAUSED', 'CLOSED'];
+                    const currentIndex = states.indexOf(this.status);
+                    this.status = states[(currentIndex + 1) % states.length];
+                    this.showToast(`Status: ${this.statusText}`);
+                },
+                
+                togglePause() {
+                    if (this.status === 'PAUSED') {
+                        this.status = 'ACTIVE';
+                        this.showToast('Kø aktivert');
+                    } else {
+                        this.status = 'PAUSED';
+                        this.showToast('Kø satt på pause');
+                    }
+                },
+                
+                async callNext() {
+                    if (this.queue.length === 0) {
+                        this.showToast('Ingen venter i kø', true);
+                        return;
+                    }
+                    
+                    if (this.currentCustomer) {
+                        // Complete current first
+                        this.completeCurrent();
+                    }
+                    
+                    // Get next customer
+                    const next = this.queue.shift();
+                    this.currentCustomer = {
+                        ...next,
+                        calledAt: new Date()
+                    };
+                    
+                    // Play sound
+                    if (this.soundEnabled) {
+                        this.playBeep();
+                    }
+                    
+                    this.showToast(`Kalt: ${next.number}`);
+                    
+                    // Simulate API call
+                    // await fetch(`/api/queue/call-next`, { method: 'POST' });
+                },
+                
+                completeCurrent() {
+                    if (!this.currentCustomer) return;
+                    
+                    this.stats.servedToday++;
+                    this.currentCustomer = null;
+                    this.showToast('Kunde fullført');
+                },
+                
+                cancelCurrent() {
+                    if (!this.currentCustomer) return;
+                    
+                    // Return to queue
+                    this.queue.unshift(this.currentCustomer);
+                    this.currentCustomer = null;
+                    this.showToast('Kunde kansellert', true);
+                },
+                
+                transferToCounter(counterId) {
+                    if (!this.currentCustomer) return;
+                    
+                    const counter = this.availableCounters.find(c => c.id === counterId);
+                    this.showTransferModal = false;
+                    this.currentCustomer = null;
+                    this.showToast(`Overført til ${counter?.name || 'annen skranke'}`);
+                },
+                
+                playBeep() {
+                    try {
+                        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                        const oscillator = audioContext.createOscillator();
+                        const gainNode = audioContext.createGain();
+                        
+                        oscillator.connect(gainNode);
+                        gainNode.connect(audioContext.destination);
+                        
+                        oscillator.frequency.value = 800;
+                        oscillator.type = 'sine';
+                        
+                        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                        
+                        oscillator.start(audioContext.currentTime);
+                        oscillator.stop(audioContext.currentTime + 0.3);
+                    } catch (e) {
+                        // Audio not supported
+                    }
+                },
+                
+                showToast(message, error = false) {
+                    this.toast = { show: true, message, error };
+                    setTimeout(() => {
+                        this.toast.show = false;
+                    }, 3000);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
