@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="no" x-data="ownerDashboard()">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kø-eier Dashboard - Variant 2 (Compact List)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .table-row:hover { background-color: #f1f5f9; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+    <!-- Top Navigation -->
+    <nav class="bg-slate-900 text-white border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-14">
+                <div class="flex items-center gap-8">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-sm">SQ</div>
+                        <span class="font-semibold text-lg">Simple Queue</span>
+                    </div>
+                    <div class="hidden md:flex items-center gap-1">
+                        <a href="#" class="px-4 py-2 rounded-lg bg-slate-800 text-white text-sm font-medium">Dashboard</a>
+                        <a href="#" class="px-4 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 text-sm font-medium transition-colors">Mine køer</a>
+                        <a href="#" class="px-4 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 text-sm font-medium transition-colors">Statistikk</a>
+                        <a href="#" class="px-4 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 text-sm font-medium transition-colors">Innstillinger</a>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button class="relative p-2 text-slate-400 hover:text-white transition-colors">
+                        <i class="fas fa-bell"></i>
+                        <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                    </button>
+                    <div class="flex items-center gap-3 pl-4 border-l border-slate-700">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-sm font-medium">KE</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <!-- KPI Cards - Compact -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white rounded-lg p-4 border border-slate-200 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-users text-indigo-600"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500 uppercase font-semibold tracking-wider">Kunder i dag</p>
+                        <p class="text-xl font-bold text-slate-900">247</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg p-4 border border-slate-200 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-clock text-emerald-600"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500 uppercase font-semibold tracking-wider">Snitt ventetid</p>
+                        <p class="text-xl font-bold text-slate-900">8m 32s</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg p-4 border border-slate-200 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-hourglass-half text-amber-600"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500 uppercase font-semibold tracking-wider">Venter nå</p>
+                        <p class="text-xl font-bold text-slate-900">18</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg p-4 border border-slate-200 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-tachometer-alt text-purple-600"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500 uppercase font-semibold tracking-wider">Betjening/time</p>
+                        <p class="text-xl font-bold text-slate-900">4.2</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Bar -->
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold text-slate-900">Kø-oversikt</h2>
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 bg-white rounded-lg border border-slate-200 p-1">
+                    <button class="px-3 py-1.5 rounded-md bg-slate-900 text-white text-sm font-medium">Alle</button>
+                    <button class="px-3 py-1.5 rounded-md text-slate-600 hover:bg-slate-100 text-sm font-medium">Aktive</button>
+                    <button class="px-3 py-1.5 rounded-md text-slate-600 hover:bg-slate-100 text-sm font-medium">Pauset</button>
+                </div>
+                <button class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium flex items-center gap-2">
+                    <i class="fas fa-plus"></i>Ny kø
+                </button>
+            </div>
+        </div>
+
+        <!-- Compact Table -->
+        <div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+            <table class="w-full">
+                <thead class="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                        <th class="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Kø</th>
+                        <th class="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                        <th class="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Venter</th>
+                        <th class="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Betjent</th>
+                        <th class="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Snitt tid</th>
+                        <th class="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Kapasitet</th>
+                        <th class="text-right py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Aksjoner</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200">
+                    <tr class="table-row transition-colors">
+                        <td class="py-3 px-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                                    <i class="fas fa-list text-emerald-600"></i>
+                                </div>
+                                <div>
+                                    <p class="font-medium text-slate-900">Hovedkø</p>
+                                    <p class="text-sm text-slate-500">Resepsjonen</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-3 px-4">
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Aktiv
+                            </span>
+                        </td>
+                        <td class="py-3 px-4 text-center">
+                            <span class="text-lg font-semibold text-slate-900">8</span>
+                        </td>
+                        <td class="py-3 px-4 text-center text-slate-600">45</td>
+                        <td class="py-3 px-4 text-center text-slate-600">6m</td>
+                        <td class="py-3 px-4">
+                            <div class="flex items-center gap-3">
+                                <div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden max-w-[100px]">
+                                    <div class="h-full bg-emerald-500 rounded-full" style="width: 35%"></div>
+                                </div>
+                                <span class="text-sm text-slate-600 w-8">35%</span>
+                            </div>
+                        </td>
+                        <td class="py-3 px-4">
+                            <div class="flex items-center justify-end gap-2">
+                                <button class="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Pause">
+                                    <i class="fas fa-pause"></i>
+                                </button>
+                                <button class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Lukk">
+                                    <i class="fas fa-power-off"></i>
+                                </button>
+                                <button class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="QR-kode">
+                                    <i class="fas fa-qrcode"></i>
+                                </button>
+                                <button class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="Innstillinger">
+                                    <i class="fas fa-cog"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr class="table-row transition-colors">
+                        <td class="py-3 px-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                                    <i class="fas fa-user-md text-blue-600"></i>
+                                </div>
+                                <div>
+                                    <p class="font-medium text-slate-900">Legekontor</p>
+                                    <p class="text-sm text-slate-500">Etasje 2</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-3 px-4">
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Aktiv
+                            </span>
+                        </td>
+                        <td class="py-3 px-4 text-center">
+                            <span class="text-lg font-semibold text-slate-900">3</span>
+                        </td>
+                        <td class="py-3 px-4 text-center text-slate-600">28</td>
+                        <td class="py-3 px-4 text-center text-slate-600">12m</td>
+                        <td class="py-3 px-4">
+                            <div class="flex items-center gap-3">
+                                <div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden max-w-[100px]">
+                                    <div class="h-full bg-emerald-500 rounded-full" style="width: 15%"></div>
+                                </div>
+                                <span class="text-sm text-slate-600 w-8">15%</span>
+                            </div>
+                        </td>
+                        <td class="py-3 px-4">
+                            <div class="flex items-center justify-end gap-2">
+                                <button class="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Pause">
+                                    <i class="fas fa-pause"></i>
+                                </button>
+                                <button class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Lukk">
+                                    <i class="fas fa-power-off"></i>
+                                </button>
+                                <button class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="QR-kode">
+                                    <i class="fas fa-qrcode"></i>
+                                </button>
+                                <button class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="Innstillinger">
+                                    <i class="fas fa-cog"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr class="table-row transition-colors">
+                        <td class="py-3 px-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                                    <i class="fas fa-cut text-amber-600"></i>
+                                </div>
+                                <div>
+                                    <p class="font-medium text-slate-900">Frisør</p>
+                                    <p class="text-sm text-slate-500">Etasje 1</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-3 px-4">
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Pauset
+                            </span>
+                        </td>
+                        <td class="py-3 px-4 text-center">
+                            <span class="text-lg font-semibold text-slate-500">0</span>
+                        </td>
+                        <td class="py-3 px-4 text-center text-slate-600">15</td>
+                        <td class="py-3 px-4 text-center text-slate-600">-</td>
+                        <td class="py-3 px-4">
+                            <div class="flex items-center gap-3">
+                                <div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden max-w-[100px]">
+                                    <div class="h-full bg-slate-300 rounded-full" style="width: 0%"></div>
+                                </div>
+                                <span class="text-sm text-slate-600 w-8">0%</span>
+                            </div>
+                        </td>
+                        <td class="py-3 px-4">
+                            <div class="flex items-center justify-end gap-2">
+                                <button class="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="Start">
+                                    <i class="fas fa-play"></i>
+                                </button>
+                                <button class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Lukk">
+                                    <i class="fas fa-power-off"></i>
+                                </button>
+                                <button class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="QR-kode">
+                                    <i class="fas fa-qrcode"></i>
+                                </button>
+                                <button class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="Innstillinger">
+                                    <i class="fas fa-cog"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script>
+        function ownerDashboard() {
+            return {
+                queues: []
+            }
+        }
+    </script>
+</body>
+</html>
