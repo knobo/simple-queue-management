@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kø-eier Dashboard - Simple Queue</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.15); }
+        .gradient-bg { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
+        .status-active { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+        .status-paused { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+        .status-closed { background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); }
+        .sidebar-item { transition: all 0.2s ease; }
+        .sidebar-item:hover { background-color: rgba(59, 130, 246, 0.1); color: #2563eb; }
+        .sidebar-item.active { background-color: rgba(59, 130, 246, 0.15); color: #2563eb; border-right: 3px solid #2563eb; }
+        .kpi-card { transition: all 0.3s ease; }
+        .kpi-card:hover { transform: scale(1.02); }
+        .queue-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .queue-card:hover { transform: translateY(-6px); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.2); }
+        .action-btn { transition: all 0.2s ease; }
+        .action-btn:hover { transform: scale(1.05); }
+        .qr-expand { transition: all 0.3s ease; max-height: 0; overflow: hidden; }
+        .qr-expand.open { max-height: 300px; }
+        .notification-badge { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        .progress-ring { transform: rotate(-90deg); }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800" x-data="dashboardData()">
+    <div class="flex h-screen overflow-hidden">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="w-64 bg-white shadow-lg flex flex-col z-20">
+            <!-- Logo -->
+            <div class="p-6 border-b border-gray-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 gradient-bg rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                        <i class="fas fa-layer-group"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-xl text-gray-900">Simple Queue</h1>
+                        <p class="text-xs text-gray-500">Kø-eier Dashboard</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
+                <a href="#" class="sidebar-item active flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium">
+                    <i class="fas fa-th-large w-5"></i>
+                    <span>Oversikt</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg text-gray-600 text-sm font-medium">
+                    <i class="fas fa-list-ul w-5"></i>
+                    <span>Mine Køer</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg text-gray-600 text-sm font-medium">
+                    <i class="fas fa-chart-bar w-5"></i>
+                    <span>Statistikk</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg text-gray-600 text-sm font-medium">
+                    <i class="fas fa-users w-5"></i>
+                    <span>Operatører</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg text-gray-600 text-sm font-medium">
+                    <i class="fas fa-cog w-5"></i>
+                    <span>Innstillinger</span>
+                </a>
+            </nav>
+
+            <!-- User Profile -->
+            <div class="p-4 border-t border-gray-100">
+                <div class="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold">
+                        KO
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-gray-900 truncate">Klinikk Oslo</p>
+                        <p class="text-xs text-gray-500 truncate">owner@klinikk.no</p>
+                    </div>
+                    <button class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto">
+            <!-- Top Header -->
+            <header class="bg-white shadow-sm sticky top-0 z-10">
+                <div class="px-8 py-4 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900">Dashboard</h2>
+                        <p class="text-sm text-gray-500">God morgen! Her er oversikten over dine køer.</p>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <!-- Notifications -->
+                        <button class="relative p-2 text-gray-500 hover:text-gray-700 transition-colors">
+                            <i class="fas fa-bell text-xl"></i>
+                            <span class="notification-badge absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                        </button>
+                        <!-- New Queue Button -->
+                        <button class="gradient-bg text-white px-5 py-2.5 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all flex items-center gap-2">
+                            <i class="fas fa-plus"></i>
+                            <span>Ny Kø</span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <div class="p-8 space-y-8">
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <!-- Total Customers Today -->
+                    <div class="kpi-card bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500 mb-1">Kunder i dag</p>
+                                <p class="text-3xl font-bold text-gray-900" x-text="stats.customersToday">47</p>
+                                <p class="text-xs text-green-600 mt-2 flex items-center gap-1">
+                                    <i class="fas fa-arrow-up"></i>
+                                    <span>+12% fra i går</span>
+                                </p>
+                            </div>
+                            <div class="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
+                                <i class="fas fa-users text-blue-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Average Wait Time -->
+                    <div class="kpi-card bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500 mb-1">Snitt ventetid</p>
+                                <p class="text-3xl font-bold text-gray-900"><span x-text="stats.avgWaitTime">8</span><span class="text-lg text-gray-500">min</span></p>
+                                <p class="text-xs text-green-600 mt-2 flex items-center gap-1">
+                                    <i class="fas fa-arrow-down"></i>
+                                    <span>-2min fra i går</span>
+                                </p>
+                            </div>
+                            <div class="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center">
+                                <i class="fas fa-clock text-green-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Currently Waiting -->
+                    <div class="kpi-card bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500 mb-1">Venter nå</p>
+                                <p class="text-3xl font-bold text-gray-900" x-text="stats.currentlyWaiting">12</p>
+                                <p class="text-xs text-gray-500 mt-2">På tvers av alle køer</p>
+                            </div>
+                            <div class="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center">
+                                <i class="fas fa-hourglass-half text-amber-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Service Rate -->
+                    <div class="kpi-card bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500 mb-1">Betjeningshastighet</p>
+                                <p class="text-3xl font-bold text-gray-900"><span x-text="stats.serviceRate">4.5</span><span class="text-lg text-gray-500">/time</span></p>
+                                <p class="text-xs text-blue-600 mt-2 flex items-center gap-1">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>God effektivitet</span>
+                                </p>
+                            </div>
+                            <div class="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center">
+                                <i class="fas fa-tachometer-alt text-purple-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Queue Cards Grid -->
+                <div>
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-semibold text-gray-900">Mine Køer</h3>
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm text-gray-500">Filter:</span>
+                            <select class="text-sm border-gray-200 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                <option>Alle køer</option>
+                                <option>Aktive</option>
+                                <option>Pauset</option>
+                                <option>Lukket</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                        <!-- Queue Card 1 - Active -->
+                        <div class="queue-card bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                            <!-- Card Header -->
+                            <div class="p-6 pb-4">
+                                <div class="flex items-start justify-between mb-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-2xl shadow-lg">
+                                            <i class="fas fa-user-md"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-semibold text-gray-900 text-lg">Legetime</h4>
+                                            <p class="text-sm text-gray-500">Hovedkontor</p>
+                                        </div>
+                                    </div>
+                                    <span class="px-3 py-1 rounded-full text-xs font-semibold text-white status-active">
+                                        Aktiv
+                                    </span>
+                                </div>
+
+                                <!-- Stats Row -->
+                                <div class="grid grid-cols-3 gap-4 py-4 border-t border-b border-gray-100">
+                                    <div class="text-center">
+                                        <p class="text-2xl font-bold text-gray-900">5</p>
+                                        <p class="text-xs text-gray-500">Venter</p>
+                                    </div>
+                                    <div class="text-center border-x border-gray-100">
+                                        <p class="text-2xl font-bold text-gray-900">12</p>
+                                        <p class="text-xs text-gray-500">Betjent i dag</p>
+                                    </div>
+                                    <div class="text-center">
+                                        <p class="text-2xl font-bold text-gray-900">10<span class="text-sm">min</span></p>
+                                        <p class="text-xs text-gray-500">Est. ventetid</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- QR Code Section -->
+                            <div class="px-6">
+                                <button @click="toggleQr('queue1')" class="w-full flex items-center justify-between py-3 text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors">
+                                    <span class="flex items-center gap-2">
+                                        <i class="fas fa-qrcode"></i>
+                                        Vis QR-kode for deling
+                                    </span>
+                                    <i class="fas fa-chevron-down transition-transform" :class="{ 'rotate-180': qrOpen.queue1 }"></i>
+                                </button>
+                                <div class="qr-expand" :class="{ 'open': qrOpen.queue1 }">
+                                    <div class="pb-4 flex flex-col items-center">
+                                        <div class="bg-white p-4 rounded-xl shadow-inner border border-gray-200">
+                                            <!-- QR Code Placeholder -->
+                                            <div class="w-40 h-40 bg-gray-900 rounded-lg flex items-center justify-center">
+                                                <div class="grid grid-cols-5 gap-1 p-3">
+                                                    <template x-for="i in 25">
+                                                        <div :class="Math.random() > 0.5 ? 'bg-white w-5 h-5' : 'bg-gray-900 w-5 h-5'"></div>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p class="text-xs text-gray-500 mt-3 text-center">Skann for å bli med i køen</p>
+                                        <div class="flex gap-2 mt-3">
+                                            <button class="text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                                                <i class="fas fa-download mr-1"></i>Last ned
+                                            </button>
+                                            <button class="text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                                                <i class="fas fa-copy mr-1"></i>Kopier lenke
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="p-4 bg-gray-50 flex gap-2">
+                                <button class="action-btn flex-1 py-2.5 px-4 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2">
+                                    <i class="fas fa-pause"></i>
+                                    Pause
+                                </button>
+                                <button class="action-btn flex-1 py-2.5 px-4 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2">
+                                    <i class="fas fa-stop"></i>
+                                    Lukk
+                                </button>
+                                <button class="action-btn py-2.5 px-4 bg-white hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-lg font-medium text-sm transition-colors">
+                                    <i class="fas fa-cog"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Queue Card 2 - Paused -->
+                        <div class="queue-card bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                            <div class="p-6 pb-4">
+                                <div class="flex items-start justify-between mb-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white text-2xl shadow-lg">
+                                            <i class="fas fa-cut"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-semibold text-gray-900 text-lg">Frisør</h4>
+                                            <p class="text-sm text-gray-500">Avdeling Sentrum</p>
+                                        </div>
+                                    </div>
+                                    <span class="px-3 py-1 rounded-full text-xs font-semibold text-white status-paused">
+                                        Pauset
+                                    </span>
+                                </div>
+
+                                <div class="grid grid-cols-3 gap-4 py-4 border-t border-b border-gray-100">
+                                    <div class="text-center">
+                                        <p class="text-2xl font-bold text-gray-900">0</p>
+                                        <p class="text-xs text-gray-500">Venter</p>
+                                    </div>
+                                    <div class="text-center border-x border-gray-100">
+                                        <p class="text-2xl font-bold text-gray-900">8</p>
+                                        <p class="text-xs text-gray-500">Betjent i dag</p>
+                                    </div>
+                                    <div class="text-center">
+                                        <p class="text-2xl font-bold text-gray-400">-</p>
+                                        <p class="text-xs text-gray-500">Est. ventetid</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="px-6">
+                                <button @click="toggleQr('queue2')" class="w-full flex items-center justify-between py-3 text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors">
+                                    <span class="flex items-center gap-2">
+                                        <i class="fas fa-qrcode"></i>
+                                        Vis QR-kode for deling
+                                    </span>
+                                    <i class="fas fa-chevron-down transition-transform" :class="{ 'rotate-180': qrOpen.queue2 }"></i>
+                                </button>
+                                <div class="qr-expand" :class="{ 'open': qrOpen.queue2 }">
+                                    <div class="pb-4 flex flex-col items-center">
+                                        <div class="bg-white p-4 rounded-xl shadow-inner border border-gray-200">
+                                            <div class="w-40 h-40 bg-gray-900 rounded-lg flex items-center justify-center">
+                                                <div class="grid grid-cols-5 gap-1 p-3">
+                                                    <template x-for="i in 25">
+                                                        <div :class="Math.random() > 0.5 ? 'bg-white w-5 h-5' : 'bg-gray-900 w-5 h-5'"></div>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p class="text-xs text-gray-500 mt-3 text-center">Skann for å bli med i køen</p>
+                                        <div class="flex gap-2 mt-3">
+                                            <button class="text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                                                <i class="fas fa-download mr-1"></i>Last ned
+                                            </button>
+                                            <button class="text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                                                <i class="fas fa-copy mr-1"></i>Kopier lenke
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="p-4 bg-gray-50 flex gap-2">
+                                <button class="action-btn flex-1 py-2.5 px-4 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2">
+                                    <i class="fas fa-play"></i>
+                                    Åpne
+                                </button>
+                                <button class="action-btn flex-1 py-2.5 px-4 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2">
+                                    <i class="fas fa-stop"></i>
+                                    Lukk
+                                </button>
+                                <button class="action-btn py-2.5 px-4 bg-white hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-lg font-medium text-sm transition-colors">
+                                    <i class="fas fa-cog"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Queue Card 3 - Closed -->
+                        <div class="queue-card bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden opacity-75">
+                            <div class="p-6 pb-4">
+                                <div class="flex items-start justify-between mb-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-gray-500 to-gray-600 flex items-center justify-center text-white text-2xl shadow-lg">
+                                            <i class="fas fa-spa"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-semibold text-gray-900 text-lg">Massasje</h4>
+                                            <p class="text-sm text-gray-500">Avdeling Vest</p>
+                                        </div>
+                                    </div>
+                                    <span class="px-3 py-1 rounded-full text-xs font-semibold text-white status-closed">
+                                        Lukket
+                                    </span>
+                                </div>
+
+                                <div class="grid grid-cols-3 gap-4 py-4 border-t border-b border-gray-100">
+                                    <div class="text-center">
+                                        <p class="text-2xl font-bold text-gray-400">-</p>
+                                        <p class="text-xs text-gray-500">Venter</p>
+                                    </div>
+                                    <div class="text-center border-x border-gray-100">
+                                        <p class="text-2xl font-bold text-gray-900">27</p>
+                                        <p class="text-xs text-gray-500">Betjent i dag</p>
+                                    </div>
+                                    <div class="text-center">
+                                        <p class="text-2xl font-bold text-gray-400">-</p>
+                                        <p class="text-xs text-gray-500">Est. ventetid</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="px-6">
+                                <button @click="toggleQr('queue3')" class="w-full flex items-center justify-between py-3 text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors">
+                                    <span class="flex items-center gap-2">
+                                        <i class="fas fa-qrcode"></i>
+                                        Vis QR-kode for deling
+                                    </span>
+                                    <i class="fas fa-chevron-down transition-transform" :class="{ 'rotate-180': qrOpen.queue3 }"></i>
+                                </button>
+                                <div class="qr-expand" :class="{ 'open': qrOpen.queue3 }">
+                                    <div class="pb-4 flex flex-col items-center">
+                                        <div class="bg-white p-4 rounded-xl shadow-inner border border-gray-200">
+                                            <div class="w-40 h-40 bg-gray-900 rounded-lg flex items-center justify-center">
+                                                <div class="grid grid-cols-5 gap-1 p-3">
+                                                    <template x-for="i in 25">
+                                                        <div :class="Math.random() > 0.5 ? 'bg-white w-5 h-5' : 'bg-gray-900 w-5 h-5'"></div>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p class="text-xs text-gray-500 mt-3 text-center">Skann for å bli med i køen</p>
+                                        <div class="flex gap-2 mt-3">
+                                            <button class="text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                                                <i class="fas fa-download mr-1"></i>Last ned
+                                            </button>
+                                            <button class="text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                                                <i class="fas fa-copy mr-1"></i>Kopier lenke
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="p-4 bg-gray-50 flex gap-2">
+                                <button class="action-btn flex-1 py-2.5 px-4 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2">
+                                    <i class="fas fa-play"></i>
+                                    Åpne
+                                </button>
+                                <button class="action-btn py-2.5 px-4 bg-white hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-lg font-medium text-sm transition-colors">
+                                    <i class="fas fa-cog"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Add New Queue Card -->
+                        <div class="queue-card bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl shadow-sm border-2 border-dashed border-blue-200 overflow-hidden flex flex-col items-center justify-center p-8 min-h-[400px] cursor-pointer hover:border-blue-400 hover:bg-blue-50/80 transition-all group">
+                            <div class="w-20 h-20 rounded-full bg-white shadow-lg flex items-center justify-center text-blue-500 text-3xl mb-4 group-hover:scale-110 transition-transform">
+                                <i class="fas fa-plus"></i>
+                            </div>
+                            <h4 class="font-semibold text-gray-900 text-lg mb-2">Opprett ny kø</h4>
+                            <p class="text-sm text-gray-500 text-center max-w-xs">Legg til en ny kø for å administrere ventelister effektivt</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notifications Section -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                            <i class="fas fa-bell text-amber-500"></i>
+                            Varsler
+                        </h3>
+                        <button class="text-sm text-blue-600 hover:text-blue-700 font-medium">Merk alle som lest</button>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="flex items-start gap-4 p-4 bg-amber-50 rounded-xl border border-amber-100">
+                            <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-exclamation-triangle text-amber-600"></i>
+                            </div>
+                            <div class="flex-1">
+                                <p class="font-medium text-gray-900">Høy ventetid i "Legetime"</p>
+                                <p class="text-sm text-gray-600">Ventetiden har oversteg 15 minutter. Vurder å legge til flere operatører.</p>
+                                <p class="text-xs text-gray-400 mt-1">2 minutter siden</p>
+                            </div>
+                            <button class="text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="flex items-start gap-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
+                            <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-info-circle text-blue-600"></i>
+                            </div>
+                            <div class="flex-1">
+                                <p class="font-medium text-gray-900">Daglig rapport klar</p>
+                                <p class="text-sm text-gray-600">Din daglige statistikrapport for går er nå tilgjengelig.</p>
+                                <p class="text-xs text-gray-400 mt-1">1 time siden</p>
+                            </div>
+                            <button class="text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function dashboardData() {
+            return {
+                stats: {
+                    customersToday: 47,
+                    avgWaitTime: 8,
+                    currentlyWaiting: 12,
+                    serviceRate: 4.5
+                },
+                qrOpen: {
+                    queue1: false,
+                    queue2: false,
+                    queue3: false
+                },
+                toggleQr(queueId) {
+                    this.qrOpen[queueId] = !this.qrOpen[queueId];
+                }
+            }
+        }
+    </script>
+</body>
+</html>
