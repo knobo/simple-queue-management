@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.GetMapping
  * Dashboard Variant Controller.
  * Serves role-specific dashboard variants for different user types.
  * 
- * - variant1: Queue Owner dashboard (OWNER or SELLER)
- * - variant2: Queue Operator dashboard (OPERATOR or OWNER)
+ * - variant1: Queue Owner dashboard (OWNER, SELLER, or SUPERADMIN)
+ * - variant2: Queue Operator dashboard (OPERATOR, OWNER, or SUPERADMIN)
  * - variant3: Seller dashboard (SELLER or SUPERADMIN)
  * - variant4: Superadmin dashboard (SUPERADMIN only)
  */
@@ -24,10 +24,10 @@ class DashboardVariantController {
 
     /**
      * Dashboard Variant 1 - Queue Owner Dashboard
-     * Accessible by: OWNER or SELLER
+     * Accessible by: OWNER, SELLER, or SUPERADMIN
      */
     @GetMapping("/dashboard-variant1")
-    @PreAuthorize("hasAnyRole('OWNER', 'SELLER')")
+    @PreAuthorize("hasAnyRole('OWNER', 'SELLER', 'SUPERADMIN')")
     fun dashboardVariant1(): String {
         logger.info("Serving dashboard-variant1 for queue owner")
         return "dashboard-variants/dashboard-variant1"
@@ -35,10 +35,10 @@ class DashboardVariantController {
 
     /**
      * Dashboard Variant 2 - Queue Operator Dashboard
-     * Accessible by: OPERATOR or OWNER
+     * Accessible by: OPERATOR, OWNER, or SUPERADMIN
      */
     @GetMapping("/dashboard-variant2")
-    @PreAuthorize("hasAnyRole('OPERATOR', 'OWNER')")
+    @PreAuthorize("hasAnyRole('OPERATOR', 'OWNER', 'SUPERADMIN')")
     fun dashboardVariant2(): String {
         logger.info("Serving dashboard-variant2 for queue operator")
         return "dashboard-variants/dashboard-variant2"
