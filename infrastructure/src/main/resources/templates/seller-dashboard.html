@@ -5,16 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <title th:text="#{seller.dashboard.title} + ' - Simple Queue'">Seller Dashboard - Simple Queue</title>
+    <!-- Header Styles -->
+    <div th:replace="~{fragments/header :: styles}"></div>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 20px; background-color: #f8f9fa; color: #333; }
-        .container { max-width: 900px; margin: 0 auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .language-selector a { text-decoration: none; font-size: 1.5em; margin-left: 5px; opacity: 0.6; }
-        .language-selector a.active { opacity: 1; }
-        .language-selector a:hover { opacity: 1; }
-        .header-actions { display: flex; align-items: center; gap: 15px; }
-        .logout-btn { background: none; border: none; cursor: pointer; font-size: 1.2em; opacity: 0.6; padding: 5px; }
-        .logout-btn:hover { opacity: 1; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 0; background-color: #f8f9fa; color: #333; }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 
         .card { background: white; padding: 25px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #eaeaea; }
         .card h3 { margin-top: 0; font-size: 1.3em; color: #222; border-bottom: 1px solid #eee; padding-bottom: 10px; }
@@ -165,17 +161,14 @@
     </script>
 </head>
 <body>
+<!-- Common Header -->
+<div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/header :: mobile-menu}"></div>
+<div th:replace="~{fragments/header :: mobile-menu-sidebar}"></div>
+
 <div class="container" x-data="sellerDashboard()">
-    <div class="header">
+    <div class="page-header">
         <h1 th:text="#{seller.dashboard.title}">Seller Dashboard</h1>
-        <div class="header-actions">
-            <a href="/dashboard" class="btn btn-secondary" style="font-size: 0.85em; padding: 6px 12px;" th:text="#{seller.backToMain}">Back to Main</a>
-            <div th:replace="~{fragments/language-selector :: selector}"></div>
-            <script th:replace="~{fragments/language-selector :: script}"></script>
-            <form th:action="@{/logout}" method="post" style="margin: 0;">
-                <button type="submit" class="logout-btn" th:title="#{admin.logout}">🚪</button>
-            </form>
-        </div>
     </div>
 
     <!-- Welcome message with seller status -->
@@ -321,5 +314,8 @@
         </span>
     </div>
 </div>
+
+<!-- Header Scripts -->
+<script th:replace="~{fragments/header :: scripts}"></script>
 </body>
 </html>

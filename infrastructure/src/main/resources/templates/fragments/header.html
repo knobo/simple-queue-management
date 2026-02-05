@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<!--
+  Common Header Fragment for Simple Queue
+  
+  Usage:
+    <div th:replace="~{fragments/header :: header}"></div>
+    
+  Optional model attributes:
+    - user: OAuth2User object (for authenticated user info)
+    - isSuperadmin: Boolean (to show admin links)
+    - navLinks: List of NavLink objects with 'url', 'text', 'active' properties
+    - hideNav: Boolean (to hide navigation links entirely)
+-->
+
+<head th:fragment="styles">
+<style>
+/* Header Styles */
+.sq-header {
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.sq-header-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 64px;
+}
+
+/* Logo */
+.sq-logo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sq-logo:hover {
+    opacity: 0.9;
+}
+
+.sq-logo-icon {
+    font-size: 1.3rem;
+    -webkit-text-fill-color: initial;
+}
+
+/* Navigation */
+.sq-nav {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+.sq-nav-links {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.sq-nav-links a {
+    text-decoration: none;
+    color: #555;
+    font-weight: 500;
+    font-size: 0.95rem;
+    padding: 8px 4px;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+}
+
+.sq-nav-links a:hover {
+    color: #667eea;
+}
+
+.sq-nav-links a.active {
+    color: #667eea;
+    border-bottom-color: #667eea;
+}
+
+/* Right Section - Always fixed position */
+.sq-header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-left: auto;
+}
+
+/* Language Selector in Header */
+.sq-header-right .language-dropdown {
+    position: relative;
+}
+
+.sq-header-right .language-toggle {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.1em;
+    min-height: 40px;
+    min-width: 44px;
+    transition: all 0.2s;
+}
+
+.sq-header-right .language-toggle:hover {
+    background: #e9ecef;
+    border-color: #dee2e6;
+}
+
+.sq-header-right .dropdown-arrow {
+    font-size: 0.6em;
+    color: #666;
+}
+
+.sq-header-right .language-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 6px;
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    min-width: 160px;
+    z-index: 1001;
+    overflow: hidden;
+}
+
+.sq-header-right .language-menu.open {
+    display: block;
+    animation: dropdownFadeIn 0.15s ease;
+}
+
+@keyframes dropdownFadeIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.sq-header-right .language-menu a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    color: #333;
+    text-decoration: none;
+    font-size: 0.95em;
+    transition: background 0.15s;
+}
+
+.sq-header-right .language-menu a:hover {
+    background: #f8f9fa;
+}
+
+.sq-header-right .language-menu a.active {
+    background: #e3f2fd;
+    font-weight: 500;
+    color: #667eea;
+}
+
+.sq-header-right .language-menu a .flag {
+    font-size: 1.2em;
+}
+
+/* User Menu */
+.sq-user-menu {
+    position: relative;
+}
+
+.sq-user-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #333;
+    transition: all 0.2s;
+    min-height: 40px;
+}
+
+.sq-user-toggle:hover {
+    background: #e9ecef;
+    border-color: #dee2e6;
+}
+
+.sq-user-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.sq-user-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 6px;
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    min-width: 180px;
+    z-index: 1001;
+    overflow: hidden;
+}
+
+.sq-user-dropdown.open {
+    display: block;
+    animation: dropdownFadeIn 0.15s ease;
+}
+
+.sq-user-dropdown .user-info {
+    padding: 16px;
+    border-bottom: 1px solid #e9ecef;
+    background: #f8f9fa;
+}
+
+.sq-user-dropdown .user-name {
+    font-weight: 600;
+    color: #333;
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+.sq-user-dropdown .user-email {
+    font-size: 0.85rem;
+    color: #666;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+.sq-user-dropdown a,
+.sq-user-dropdown button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 12px 16px;
+    color: #333;
+    text-decoration: none;
+    font-size: 0.9rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s;
+}
+
+.sq-user-dropdown a:hover,
+.sq-user-dropdown button:hover {
+    background: #f8f9fa;
+    color: #667eea;
+}
+
+.sq-user-dropdown .logout-btn {
+    border-top: 1px solid #e9ecef;
+    color: #dc3545;
+}
+
+.sq-user-dropdown .logout-btn:hover {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* Auth Buttons */
+.sq-auth-buttons {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.sq-btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+}
+
+.sq-btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.sq-btn-primary:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.sq-btn-outline {
+    background: transparent;
+    color: #667eea;
+    border: 1.5px solid #667eea;
+}
+
+.sq-btn-outline:hover {
+    background: #667eea;
+    color: white;
+}
+
+/* Mobile Menu */
+.sq-mobile-toggle {
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    font-size: 1.5rem;
+    color: #333;
+}
+
+.sq-mobile-menu {
+    display: none;
+    position: fixed;
+    top: 0;
+    right: -300px;
+    width: 280px;
+    height: 100vh;
+    background: white;
+    box-shadow: -4px 0 24px rgba(0,0,0,0.15);
+    z-index: 1002;
+    flex-direction: column;
+    transition: right 0.3s ease;
+}
+
+.sq-mobile-menu.open {
+    right: 0;
+}
+
+.sq-mobile-menu-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.sq-mobile-menu-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #333;
+}
+
+.sq-mobile-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+    padding: 4px;
+}
+
+.sq-mobile-nav {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 0;
+}
+
+.sq-mobile-nav a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    color: #333;
+    text-decoration: none;
+    font-weight: 500;
+    transition: background 0.15s;
+}
+
+.sq-mobile-nav a:hover {
+    background: #f8f9fa;
+    color: #667eea;
+}
+
+.sq-mobile-nav a.active {
+    background: #e3f2fd;
+    color: #667eea;
+    border-right: 3px solid #667eea;
+}
+
+.sq-mobile-user-section {
+    padding: 16px 20px;
+    border-top: 1px solid #e9ecef;
+    background: #f8f9fa;
+}
+
+.sq-mobile-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1001;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.sq-mobile-overlay.open {
+    display: block;
+    opacity: 1;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .sq-header-container {
+        height: 56px;
+        padding: 0 16px;
+    }
+    
+    .sq-logo {
+        font-size: 1.25rem;
+    }
+    
+    .sq-nav {
+        display: none;
+    }
+    
+    .sq-header-right .language-dropdown {
+        display: none;
+    }
+    
+    .sq-user-menu {
+        display: none;
+    }
+    
+    .sq-auth-buttons {
+        display: none;
+    }
+    
+    .sq-mobile-toggle {
+        display: block;
+    }
+    
+    .sq-mobile-menu {
+        display: flex;
+    }
+    
+    /* Show language selector in mobile menu */
+    .sq-mobile-nav .mobile-language-selector {
+        display: block;
+        padding: 14px 20px;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .sq-mobile-nav .mobile-language-selector strong {
+        display: block;
+        margin-bottom: 10px;
+        color: #666;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+    }
+    
+    .sq-mobile-nav .language-options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .sq-mobile-nav .language-options a {
+        display: inline-flex;
+        padding: 8px 12px;
+        border-radius: 6px;
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+    }
+    
+    .sq-mobile-nav .language-options a.active {
+        background: #e3f2fd;
+        border-color: #667eea;
+    }
+}
+
+/* Utility for body scroll lock */
+body.menu-open {
+    overflow: hidden;
+}
+</style>
+</head>
+
+<!-- Main Header Fragment -->
+<header th:fragment="header" class="sq-header">
+    <div class="sq-header-container">
+        <!-- Logo -->
+        <a href="/" class="sq-logo">
+            <span class="sq-logo-icon">⏱️</span>
+            <span th:text="${appName} ?: 'Simple Queue'">Simple Queue</span>
+        </a>
+        
+        <!-- Desktop Navigation (center) -->
+        <nav class="sq-nav" th:if="${hideNav == null or !hideNav}">
+            <ul class="sq-nav-links" th:if="${navLinks != null}">
+                <li th:each="link : ${navLinks}">
+                    <a th:href="${link.url}" 
+                       th:text="${link.text}"
+                       th:classappend="${link.active} ? 'active' : ''">Link</a>
+                </li>
+            </ul>
+            <!-- Default nav links if no custom navLinks provided -->
+            <ul class="sq-nav-links" th:unless="${navLinks != null}">
+                <li><a href="/dashboard" th:text="#{nav.dashboard} ?: 'Dashboard'">Dashboard</a></li>
+                <li><a href="/create-queue" th:text="#{nav.createQueue} ?: 'Create Queue'">Create Queue</a></li>
+            </ul>
+        </nav>
+        
+        <!-- Right Section: Language + User Menu (always same position) -->
+        <div class="sq-header-right">
+            <!-- Language Selector -->
+            <div class="language-dropdown">
+                <button class="language-toggle" onclick="toggleHeaderLanguageMenu(event)" aria-label="Select language">
+                    <span class="current-flag" th:switch="${#locale.language}">
+                        <span th:case="'en'">🇬🇧</span>
+                        <span th:case="'no'">🇳🇴</span>
+                        <span th:case="'de'">🇩🇪</span>
+                        <span th:case="'es'">🇪🇸</span>
+                        <span th:case="'fr'">🇫🇷</span>
+                        <span th:case="'it'">🇮🇹</span>
+                        <span th:case="'ja'">🇯🇵</span>
+                        <span th:case="'pl'">🇵🇱</span>
+                        <span th:case="'pt'">🇧🇷</span>
+                        <span th:case="*">🌐</span>
+                    </span>
+                    <span class="dropdown-arrow">▼</span>
+                </button>
+                <div class="language-menu" id="headerLanguageMenu">
+                    <a th:href="@{''(lang='en')}" th:classappend="${#locale.language == 'en' ? 'active' : ''}" onclick="saveHeaderLanguagePreference('en')">
+                        <span class="flag">🇬🇧</span> English
+                    </a>
+                    <a th:href="@{''(lang='no')}" th:classappend="${#locale.language == 'no' ? 'active' : ''}" onclick="saveHeaderLanguagePreference('no')">
+                        <span class="flag">🇳🇴</span> Norsk
+                    </a>
+                    <a th:href="@{''(lang='de')}" th:classappend="${#locale.language == 'de' ? 'active' : ''}" onclick="saveHeaderLanguagePreference('de')">
+                        <span class="flag">🇩🇪</span> Deutsch
+                    </a>
+                    <a th:href="@{''(lang='es')}" th:classappend="${#locale.language == 'es' ? 'active' : ''}" onclick="saveHeaderLanguagePreference('es')">
+                        <span class="flag">🇪🇸</span> Español
+                    </a>
+                    <a th:href="@{''(lang='fr')}" th:classappend="${#locale.language == 'fr' ? 'active' : ''}" onclick="saveHeaderLanguagePreference('fr')">
+                        <span class="flag">🇫🇷</span> Français
+                    </a>
+                    <a th:href="@{''(lang='it')}" th:classappend="${#locale.language == 'it' ? 'active' : ''}" onclick="saveHeaderLanguagePreference('it')">
+                        <span class="flag">🇮🇹</span> Italiano
+                    </a>
+                    <a th:href="@{''(lang='ja')}" th:classappend="${#locale.language == 'ja' ? 'active' : ''}" onclick="saveHeaderLanguagePreference('ja')">
+                        <span class="flag">🇯🇵</span> 日本語
+                    </a>
+                    <a th:href="@{''(lang='pl')}" th:classappend="${#locale.language == 'pl' ? 'active' : ''}" onclick="saveHeaderLanguagePreference('pl')">
+                        <span class="flag">🇵🇱</span> Polski
+                    </a>
+                    <a th:href="@{''(lang='pt')}" th:classappend="${#locale.language == 'pt' ? 'active' : ''}" onclick="saveHeaderLanguagePreference('pt')">
+                        <span class="flag">🇧🇷</span> Português
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Authenticated User Menu -->
+            <div class="sq-user-menu" th:if="${user != null}">
+                <button class="sq-user-toggle" onclick="toggleUserMenu(event)">
+                    <span class="sq-user-avatar" th:text="${#strings.substring(user.attributes['name'] ?: user.name, 0, 1).toUpperCase()}">U</span>
+                    <span class="sq-user-name" th:text="${user.attributes['name']} ?: ${user.name}" style="display: none;">User</span>
+                    <span>▼</span>
+                </button>
+                <div class="sq-user-dropdown" id="userDropdown">
+                    <div class="user-info">
+                        <div class="user-name" th:text="${user.attributes['name']} ?: ${user.name}">User Name</div>
+                        <div class="user-email" th:text="${user.attributes['email']} ?: ''">user@example.com</div>
+                    </div>
+                    <a href="/subscription" th:if="${isSuperadmin} == null or !${isSuperadmin}">
+                        <span>📊</span> <span th:text="#{nav.subscription} ?: 'Subscription'">Subscription</span>
+                    </a>
+                    <a href="/seller/dashboard" th:if="${isSeller}">
+                        <span>💼</span> <span th:text="#{nav.sellerDashboard} ?: 'Seller Dashboard'">Seller Dashboard</span>
+                    </a>
+                    <a href="/admin/sales" th:if="${isSuperadmin}">
+                        <span>🛡️</span> <span th:text="#{nav.admin} ?: 'Admin'">Admin</span>
+                    </a>
+                    <form th:action="@{/logout}" method="post" style="margin: 0;">
+                        <button type="submit" class="logout-btn">
+                            <span>🚪</span> <span th:text="#{nav.logout} ?: 'Log out'">Log out</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Guest Auth Buttons -->
+            <div class="sq-auth-buttons" th:unless="${user != null}">
+                <a href="/oauth2/authorization/keycloak" class="sq-btn sq-btn-outline" th:text="#{nav.login} ?: 'Log in'">Log in</a>
+                <a href="/signup" class="sq-btn sq-btn-primary" th:text="#{nav.signup} ?: 'Sign up'">Sign up</a>
+            </div>
+        </div>
+        
+        <!-- Mobile Toggle Button -->
+        <button class="sq-mobile-toggle" onclick="openMobileMenu()" aria-label="Open menu">
+            ☰
+        </button>
+    </div>
+</header>
+
+<!-- Mobile Menu -->
+<div th:fragment="mobile-menu" class="sq-mobile-overlay" id="mobileOverlay" onclick="closeMobileMenu()"></div>
+<aside th:fragment="mobile-menu-sidebar" class="sq-mobile-menu" id="mobileMenu">
+    <div class="sq-mobile-menu-header">
+        <h3 th:text="#{nav.menu} ?: 'Menu'">Menu</h3>
+        <button class="sq-mobile-close" onclick="closeMobileMenu()" aria-label="Close menu">✕</button>
+    </div>
+    
+    <nav class="sq-mobile-nav" th:if="${hideNav == null or !hideNav}">
+        <!-- Default nav links -->
+        <div th:unless="${navLinks != null}">
+            <a href="/dashboard" th:if="${user != null}">
+                <span>📊</span> <span th:text="#{nav.dashboard} ?: 'Dashboard'">Dashboard</span>
+            </a>
+            <a href="/create-queue" th:if="${user != null}">
+                <span>➕</span> <span th:text="#{nav.createQueue} ?: 'Create Queue'">Create Queue</span>
+            </a>
+            <a href="/subscription" th:if="${user != null and (isSuperadmin == null or !isSuperadmin)}">
+                <span>💳</span> <span th:text="#{nav.subscription} ?: 'Subscription'">Subscription</span>
+            </a>
+            <a href="/seller/dashboard" th:if="${isSeller}">
+                <span>💼</span> <span th:text="#{nav.sellerDashboard} ?: 'Seller Dashboard'">Seller Dashboard</span>
+            </a>
+            <a href="/admin/sales" th:if="${isSuperadmin}">
+                <span>🛡️</span> <span th:text="#{nav.admin} ?: 'Admin'">Admin</span>
+            </a>
+        </div>
+        <!-- Custom nav links -->
+        <div th:if="${navLinks != null}" th:each="link : ${navLinks}">
+            <a th:href="${link.url}" th:text="${link.text}" th:classappend="${link.active} ? 'active' : ''">Link</a>
+        </div>
+        
+        <!-- Mobile Language Selector -->
+        <div class="mobile-language-selector">
+            <strong th:text="#{nav.language} ?: 'Language'">Language</strong>
+            <div class="language-options">
+                <a th:href="@{''(lang='en')}" th:classappend="${#locale.language == 'en' ? 'active' : ''}">🇬🇧 EN</a>
+                <a th:href="@{''(lang='no')}" th:classappend="${#locale.language == 'no' ? 'active' : ''}">🇳🇴 NO</a>
+                <a th:href="@{''(lang='de')}" th:classappend="${#locale.language == 'de' ? 'active' : ''}">🇩🇪 DE</a>
+                <a th:href="@{''(lang='es')}" th:classappend="${#locale.language == 'es' ? 'active' : ''}">🇪🇸 ES</a>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Mobile User Section -->
+    <div class="sq-mobile-user-section" th:if="${user != null}">
+        <div style="margin-bottom: 12px;">
+            <div style="font-weight: 600; color: #333;" th:text="${user.attributes['name']} ?: ${user.name}">User</div>
+            <div style="font-size: 0.85rem; color: #666;" th:text="${user.attributes['email']} ?: ''">user@example.com</div>
+        </div>
+        <form th:action="@{/logout}" method="post" style="margin: 0;">
+            <button type="submit" class="sq-btn sq-btn-outline" style="width: 100%; justify-content: center;">
+                <span>🚪</span> <span th:text="#{nav.logout} ?: 'Log out'">Log out</span>
+            </button>
+        </form>
+    </div>
+    
+    <!-- Mobile Guest Section -->
+    <div class="sq-mobile-user-section" th:unless="${user != null}">
+        <a href="/oauth2/authorization/keycloak" class="sq-btn sq-btn-primary" style="display: block; text-align: center; margin-bottom: 10px;" th:text="#{nav.login} ?: 'Log in'">Log in</a>
+        <a href="/signup" class="sq-btn sq-btn-outline" style="display: block; text-align: center;" th:text="#{nav.signup} ?: 'Sign up'">Sign up</a>
+    </div>
+</aside>
+
+<!-- Header Scripts -->
+<script th:fragment="scripts">
+// Toggle language dropdown
+function toggleHeaderLanguageMenu(e) {
+    e.stopPropagation();
+    const menu = document.getElementById('headerLanguageMenu');
+    const userMenu = document.getElementById('userDropdown');
+    
+    // Close user menu if open
+    if (userMenu) userMenu.classList.remove('open');
+    
+    // Toggle language menu
+    menu.classList.toggle('open');
+}
+
+// Toggle user dropdown
+function toggleUserMenu(e) {
+    e.stopPropagation();
+    const menu = document.getElementById('userDropdown');
+    const langMenu = document.getElementById('headerLanguageMenu');
+    
+    // Close language menu if open
+    if (langMenu) langMenu.classList.remove('open');
+    
+    // Toggle user menu
+    menu.classList.toggle('open');
+}
+
+// Mobile menu
+function openMobileMenu() {
+    document.getElementById('mobileMenu').classList.add('open');
+    document.getElementById('mobileOverlay').classList.add('open');
+    document.body.classList.add('menu-open');
+}
+
+function closeMobileMenu() {
+    document.getElementById('mobileMenu').classList.remove('open');
+    document.getElementById('mobileOverlay').classList.remove('open');
+    document.body.classList.remove('menu-open');
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', function(e) {
+    const langMenu = document.getElementById('headerLanguageMenu');
+    const userMenu = document.getElementById('userDropdown');
+    
+    if (langMenu && !e.target.closest('.language-dropdown')) {
+        langMenu.classList.remove('open');
+    }
+    if (userMenu && !e.target.closest('.sq-user-menu')) {
+        userMenu.classList.remove('open');
+    }
+});
+
+// Save language preference
+function saveHeaderLanguagePreference(lang) {
+    fetch('/api/preferences/language', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: lang }),
+    }).catch(() => {});
+}
+</script>
+
+</html>

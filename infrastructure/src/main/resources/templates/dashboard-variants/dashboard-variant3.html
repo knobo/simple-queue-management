@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seller Dashboard - Simple Queue</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .gradient-success { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+        .gradient-warning { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .gradient-info { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        .animate-fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .progress-ring { transform: rotate(-90deg); }
+        .qr-placeholder { background: repeating-linear-gradient(45deg, #f3f4f6 0, #f3f4f6 10px, #e5e7eb 10px, #e5e7eb 20px); }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800" x-data="sellerDashboard()">
+    <!-- Top Navigation -->
+    <nav class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 gradient-card rounded-xl flex items-center justify-center text-white font-bold text-xl">
+                        SQ
+                    </div>
+                    <span class="font-semibold text-xl text-gray-900">Simple Queue</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button class="relative p-2 text-gray-500 hover:text-gray-700 transition-colors">
+                        <i class="fas fa-bell text-xl"></i>
+                        <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                    </button>
+                    <div class="flex items-center gap-3 pl-4 border-l border-gray-200">
+                        <div class="text-right hidden sm:block">
+                            <p class="text-sm font-medium text-gray-900" x-text="seller.name"></p>
+                            <p class="text-xs text-gray-500" x-text="seller.email"></p>
+                        </div>
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold" x-text="seller.initials">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Welcome Section -->
+        <div class="mb-8 animate-fade-in">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Welcome back, <span x-text="seller.firstName"></span>! 👋</h1>
+            <p class="text-gray-600">Here's your sales performance overview for <span x-text="currentMonth"></span></p>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Total Earnings -->
+            <div class="glass rounded-2xl p-6 shadow-sm border border-gray-100 animate-fade-in" style="animation-delay: 0.1s">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 gradient-success rounded-xl flex items-center justify-center text-white">
+                        <i class="fas fa-dollar-sign text-xl"></i>
+                    </div>
+                    <span class="text-sm font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">+12.5%</span>
+                </div>
+                <p class="text-gray-500 text-sm mb-1">Total Earnings</p>
+                <p class="text-2xl font-bold text-gray-900" x-text="formatCurrency(stats.totalEarned)"></p>
+            </div>
+
+            <!-- Active Customers -->
+            <div class="glass rounded-2xl p-6 shadow-sm border border-gray-100 animate-fade-in" style="animation-delay: 0.2s">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 gradient-info rounded-xl flex items-center justify-center text-white">
+                        <i class="fas fa-users text-xl"></i>
+                    </div>
+                    <span class="text-sm font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full">+3 new</span>
+                </div>
+                <p class="text-gray-500 text-sm mb-1">Active Customers</p>
+                <p class="text-2xl font-bold text-gray-900" x-text="stats.activeCustomers"></p>
+            </div>
+
+            <!-- Conversion Rate -->
+            <div class="glass rounded-2xl p-6 shadow-sm border border-gray-100 animate-fade-in" style="animation-delay: 0.3s">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 gradient-card rounded-xl flex items-center justify-center text-white">
+                        <i class="fas fa-chart-line text-xl"></i>
+                    </div>
+                    <span class="text-sm font-medium text-purple-600 bg-purple-50 px-2 py-1 rounded-full">+2.3%</span>
+                </div>
+                <p class="text-gray-500 text-sm mb-1">Conversion Rate</p>
+                <p class="text-2xl font-bold text-gray-900" x-text="stats.conversionRate + '%'"></p>
+            </div>
+
+            <!-- Avg Customer Value -->
+            <div class="glass rounded-2xl p-6 shadow-sm border border-gray-100 animate-fade-in" style="animation-delay: 0.4s">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 gradient-warning rounded-xl flex items-center justify-center text-white">
+                        <i class="fas fa-gem text-xl"></i>
+                    </div>
+                    <span class="text-sm font-medium text-pink-600 bg-pink-50 px-2 py-1 rounded-full">+5.2%</span>
+                </div>
+                <p class="text-gray-500 text-sm mb-1">Avg Customer Value</p>
+                <p class="text-2xl font-bold text-gray-900" x-text="formatCurrency(stats.avgCustomerValue)"></p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Main Content -->
+            <div class="lg:col-span-2 space-y-8">
+                <!-- Monthly Goal Progress -->
+                <div class="glass rounded-2xl p-6 shadow-sm border border-gray-100">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-lg font-semibold text-gray-900">Monthly Goal Progress</h2>
+                        <span class="text-sm text-gray-500" x-text="goals.daysRemaining + ' days remaining'"></span>
+                    </div>
+                    <div class="flex items-center gap-8">
+                        <div class="relative w-32 h-32 flex-shrink-0">
+                            <svg class="w-full h-full progress-ring" viewBox="0 0 100 100">
+                                <circle cx="50" cy="50" r="45" fill="none" stroke="#e5e7eb" stroke-width="8"/>
+                                <circle cx="50" cy="50" r="45" fill="none" stroke="url(#gradient)" stroke-width="8"
+                                    stroke-linecap="round" :stroke-dasharray="goals.circumference" 
+                                    :stroke-dashoffset="goals.circumference - (goals.percentage / 100) * goals.circumference"/>
+                                <defs>
+                                    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" stop-color="#667eea"/>
+                                        <stop offset="100%" stop-color="#764ba2"/>
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <span class="text-2xl font-bold text-gray-900" x-text="goals.percentage + '%'"></span>
+                            </div>
+                        </div>
+                        <div class="flex-1">
+                            <div class="mb-4">
+                                <p class="text-sm text-gray-500 mb-1">Current Progress</p>
+                                <p class="text-3xl font-bold text-gray-900" x-text="formatCurrency(goals.current)"></p>
+                            </div>
+                            <div class="mb-2">
+                                <p class="text-sm text-gray-500">Monthly Target</p>
+                                <p class="text-xl font-semibold text-gray-700" x-text="formatCurrency(goals.target)"></p>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2 mt-4">
+                                <div class="gradient-card h-2 rounded-full transition-all duration-500" :style="'width: ' + goals.percentage + '%'"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Customer Referrals List -->
+                <div class="glass rounded-2xl p-6 shadow-sm border border-gray-100">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-lg font-semibold text-gray-900">Your Customers</h2>
+                        <div class="flex gap-2">
+                            <button @click="filterStatus = 'all'" 
+                                :class="filterStatus === 'all' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600'"
+                                class="px-4 py-2 rounded-lg text-sm font-medium transition-colors">All</button>
+                            <button @click="filterStatus = 'active'" 
+                                :class="filterStatus === 'active' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600'"
+                                class="px-4 py-2 rounded-lg text-sm font-medium transition-colors">Active</button>
+                            <button @click="filterStatus = 'trial'" 
+                                :class="filterStatus === 'trial' ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-600'"
+                                class="px-4 py-2 rounded-lg text-sm font-medium transition-colors">Trial</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-gray-100">
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">Customer</th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">Status</th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">Signup Date</th>
+                                    <th class="text-right py-3 px-4 text-sm font-medium text-gray-500">Commission</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="customer in filteredCustomers" :key="customer.id">
+                                    <tr class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                                        <td class="py-4 px-4">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center text-white font-semibold text-sm"
+                                                    x-text="customer.initials"></div>
+                                                <div>
+                                                    <p class="font-medium text-gray-900" x-text="customer.name"></p>
+                                                    <p class="text-sm text-gray-500" x-text="customer.company"></p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="py-4 px-4">
+                                            <span class="px-3 py-1 rounded-full text-xs font-medium"
+                                                :class="{
+                                                    'bg-green-100 text-green-700': customer.status === 'active',
+                                                    'bg-amber-100 text-amber-700': customer.status === 'trial',
+                                                    'bg-blue-100 text-blue-700': customer.status === 'paying'
+                                                }"
+                                                x-text="customer.status.charAt(0).toUpperCase() + customer.status.slice(1)"></span>
+                                        </td>
+                                        <td class="py-4 px-4 text-sm text-gray-600" x-text="formatDate(customer.signupDate)"></td>
+                                        <td class="py-4 px-4 text-right font-medium text-gray-900" x-text="formatCurrency(customer.commission)"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Commission Summary -->
+                <div class="glass rounded-2xl p-6 shadow-sm border border-gray-100">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-6">Commission Summary</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-100">
+                            <p class="text-sm text-green-600 mb-1">Paid This Month</p>
+                            <p class="text-2xl font-bold text-green-700" x-text="formatCurrency(commission.paid)"></p>
+                        </div>
+                        <div class="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-4 border border-amber-100">
+                            <p class="text-sm text-amber-600 mb-1">Pending</p>
+                            <p class="text-2xl font-bold text-amber-700" x-text="formatCurrency(commission.pending)"></p>
+                        </div>
+                        <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
+                            <p class="text-sm text-blue-600 mb-1">Lifetime Total</p>
+                            <p class="text-2xl font-bold text-blue-700" x-text="formatCurrency(commission.lifetime)"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="space-y-8">
+                <!-- Marketing Materials -->
+                <div class="glass rounded-2xl p-6 shadow-sm border border-gray-100">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Marketing Materials</h2>
+                    
+                    <!-- Referral Link -->
+                    <div class="mb-6">
+                        <label class="text-sm font-medium text-gray-700 mb-2 block">Your Referral Link</label>
+                        <div class="flex gap-2">
+                            <input type="text" x-model="referralLink" readonly 
+                                class="flex-1 px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600">
+                            <button @click="copyLink()" 
+                                class="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                        <p x-show="copied" class="text-sm text-green-600 mt-2" x-transition>✓ Copied to clipboard!</p>
+                    </div>
+
+                    <!-- QR Code -->
+                    <div class="text-center">
+                        <label class="text-sm font-medium text-gray-700 mb-3 block">Your QR Code</label>
+                        <div class="qr-placeholder w-40 h-40 mx-auto rounded-xl flex items-center justify-center border-2 border-dashed border-gray-300">
+                            <div class="text-center">
+                                <i class="fas fa-qrcode text-4xl text-gray-400 mb-2"></i>
+                                <p class="text-xs text-gray-500">Scan to sign up</p>
+                            </div>
+                        </div>
+                        <button class="mt-4 text-sm text-blue-600 hover:text-blue-700 font-medium">
+                            <i class="fas fa-download mr-1"></i> Download QR Code
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Follow-up List -->
+                <div class="glass rounded-2xl p-6 shadow-sm border border-gray-100">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-semibold text-gray-900">Follow-ups</h2>
+                        <button @click="showAddNote = true" class="text-blue-600 hover:text-blue-700">
+                            <i class="fas fa-plus-circle text-xl"></i>
+                        </button>
+                    </div>
+
+                    <!-- Add Note Form -->
+                    <div x-show="showAddNote" x-transition class="mb-4 p-4 bg-gray-50 rounded-xl">
+                        <input type="text" x-model="newNote.customer" placeholder="Customer name" 
+                            class="w-full px-3 py-2 border border-gray-200 rounded-lg mb-2 text-sm">
+                        <textarea x-model="newNote.content" placeholder="Add a note..." 
+                            class="w-full px-3 py-2 border border-gray-200 rounded-lg mb-2 text-sm h-20 resize-none"></textarea>
+                        <select x-model="newNote.priority" class="w-full px-3 py-2 border border-gray-200 rounded-lg mb-2 text-sm">
+                            <option value="high">High Priority</option>
+                            <option value="medium">Medium Priority</option>
+                            <option value="low">Low Priority</option>
+                        </select>
+                        <div class="flex gap-2">
+                            <button @click="addNote()" class="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Add</button>
+                            <button @click="showAddNote = false" class="flex-1 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300">Cancel</button>
+                        </div>
+                    </div>
+
+                    <!-- Notes List -->
+                    <div class="space-y-3 max-h-96 overflow-y-auto">
+                        <template x-for="note in followUps" :key="note.id">
+                            <div class="p-4 bg-white rounded-xl border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
+                                @click="note.completed = !note.completed">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-5 h-5 rounded border-2 mt-0.5 flex-shrink-0 flex items-center justify-center"
+                                        :class="note.completed ? 'bg-green-500 border-green-500' : 'border-gray-300'">
+                                        <i x-show="note.completed" class="fas fa-check text-white text-xs"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <span class="font-medium text-gray-900" x-text="note.customer"></span>
+                                            <span class="px-2 py-0.5 rounded text-xs font-medium"
+                                                :class="{
+                                                    'bg-red-100 text-red-700': note.priority === 'high',
+                                                    'bg-amber-100 text-amber-700': note.priority === 'medium',
+                                                    'bg-green-100 text-green-700': note.priority === 'low'
+                                                }"
+                                                x-text="note.priority.charAt(0).toUpperCase() + note.priority.slice(1)"></span>
+                                        </div>
+                                        <p class="text-sm text-gray-600" :class="note.completed ? 'line-through opacity-50' : ''" x-text="note.content"></p>
+                                        <p class="text-xs text-gray-400 mt-2" x-text="note.date"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="glass rounded-2xl p-6 shadow-sm border border-gray-100">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Quick Stats</h2>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-600">Trial Conversions</span>
+                            <span class="font-semibold text-gray-900">8/12 (67%)</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-blue-500 h-2 rounded-full" style="width: 67%"></div>
+                        </div>
+                        <div class="flex items-center justify-between pt-2">
+                            <span class="text-gray-600">Monthly Target</span>
+                            <span class="font-semibold text-gray-900">75%</span>
+                        </div>
+                        <div class="flex items-center justify-between pt-2">
+                            <span class="text-gray-600">Active Referrals</span>
+                            <span class="font-semibold text-gray-900" x-text="stats.activeCustomers"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function sellerDashboard() {
+            return {
+                seller: {
+                    name: 'Sarah Johnson',
+                    firstName: 'Sarah',
+                    email: 'sarah.j@example.com',
+                    initials: 'SJ',
+                    status: 'active'
+                },
+                currentMonth: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+                
+                stats: {
+                    totalEarned: 8450.00,
+                    activeCustomers: 24,
+                    conversionRate: 68.5,
+                    avgCustomerValue: 352.00
+                },
+
+                goals: {
+                    target: 10000.00,
+                    current: 7500.00,
+                    percentage: 75,
+                    circumference: 2 * Math.PI * 45,
+                    daysRemaining: 18
+                },
+
+                commission: {
+                    paid: 3200.00,
+                    pending: 1450.00,
+                    lifetime: 28450.00
+                },
+
+                filterStatus: 'all',
+                
+                customers: [
+                    { id: 1, name: 'John Smith', company: 'TechCorp Inc.', status: 'active', signupDate: '2024-01-15', commission: 450.00, initials: 'JS' },
+                    { id: 2, name: 'Emma Davis', company: 'Design Studio', status: 'paying', signupDate: '2024-01-12', commission: 320.00, initials: 'ED' },
+                    { id: 3, name: 'Michael Brown', company: 'StartupXYZ', status: 'trial', signupDate: '2024-01-20', commission: 0.00, initials: 'MB' },
+                    { id: 4, name: 'Lisa Wilson', company: 'Marketing Pro', status: 'active', signupDate: '2024-01-08', commission: 280.00, initials: 'LW' },
+                    { id: 5, name: 'David Lee', company: 'Consulting Co', status: 'trial', signupDate: '2024-01-22', commission: 0.00, initials: 'DL' },
+                    { id: 6, name: 'Anna Garcia', company: 'Retail Plus', status: 'paying', signupDate: '2024-01-05', commission: 520.00, initials: 'AG' }
+                ],
+
+                get filteredCustomers() {
+                    if (this.filterStatus === 'all') return this.customers;
+                    return this.customers.filter(c => c.status === this.filterStatus);
+                },
+
+                referralLink: 'https://simplequeue.com/ref/SARAH2024',
+                copied: false,
+                
+                showAddNote: false,
+                newNote: { customer: '', content: '', priority: 'medium' },
+                
+                followUps: [
+                    { id: 1, customer: 'Michael Brown', content: 'Follow up on trial feedback and upgrade options', priority: 'high', date: 'Today', completed: false },
+                    { id: 2, customer: 'David Lee', content: 'Send pricing information and case studies', priority: 'medium', date: 'Tomorrow', completed: false },
+                    { id: 3, customer: 'Emma Davis', content: 'Check in on implementation progress', priority: 'low', date: 'Jan 28', completed: true },
+                    { id: 4, customer: 'New Lead', content: 'Call back from website inquiry', priority: 'high', date: 'Today', completed: false }
+                ],
+
+                formatCurrency(value) {
+                    return new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: 'USD'
+                    }).format(value);
+                },
+
+                formatDate(dateStr) {
+                    return new Date(dateStr).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                    });
+                },
+
+                copyLink() {
+                    navigator.clipboard.writeText(this.referralLink);
+                    this.copied = true;
+                    setTimeout(() => this.copied = false, 2000);
+                },
+
+                addNote() {
+                    if (this.newNote.customer && this.newNote.content) {
+                        this.followUps.unshift({
+                            id: Date.now(),
+                            customer: this.newNote.customer,
+                            content: this.newNote.content,
+                            priority: this.newNote.priority,
+                            date: 'Just now',
+                            completed: false
+                        });
+                        this.newNote = { customer: '', content: '', priority: 'medium' };
+                        this.showAddNote = false;
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

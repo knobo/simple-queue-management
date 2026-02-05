@@ -5,15 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <title th:text="#{create.title} + ' - Simple Queue'">Create Queue - Simple Queue</title>
+    <!-- Header Styles -->
+    <div th:replace="~{fragments/header :: styles}"></div>
     <!-- Alpine.js for interactivity -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
     <style>
-        body { font-family: sans-serif; padding: 20px; }
-        .container { max-width: 600px; margin: 0 auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .language-selector a { text-decoration: none; font-size: 1.5em; margin-left: 5px; opacity: 0.6; }
-        .language-selector a.active { opacity: 1; }
-        .language-selector a:hover { opacity: 1; }
+        body { font-family: sans-serif; padding: 0; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .page-header { margin-bottom: 20px; }
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; }
         input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; }
@@ -52,11 +51,14 @@
     </style>
 </head>
 <body>
+<!-- Common Header -->
+<div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/header :: mobile-menu}"></div>
+<div th:replace="~{fragments/header :: mobile-menu-sidebar}"></div>
+
     <div class="container" x-data="createQueueForm()" x-cloak>
-        <div class="header">
+        <div class="page-header">
             <h1 th:text="#{create.title}">Create a New Queue</h1>
-            <div th:replace="~{fragments/language-selector :: selector}"></div>
-            <script th:replace="~{fragments/language-selector :: script}"></script>
         </div>
         
         <div x-show="errorMessage" class="error" x-text="errorMessage"></div>
@@ -128,5 +130,8 @@
             }
         }
     </script>
+
+<!-- Header Scripts -->
+<script th:replace="~{fragments/header :: scripts}"></script>
 </body>
 </html>
