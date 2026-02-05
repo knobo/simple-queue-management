@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="no" x-data="kioskOperator()">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Købetjening - Kiosk Mode</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        
+        * {
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            overflow: hidden;
+        }
+        
+        /* Kiosk Mode - Full Screen */
+        .kiosk-container {
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Status Colors */
+        .status-active { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+        .status-paused { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+        .status-closed { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+        
+        .bg-status-active { background-color: #10b981; }
+        .bg-status-paused { background-color: #f59e0b; }
+        .bg-status-closed { background-color: #ef4444; }
+        
+        .text-status-active { color: #10b981; }
+        .text-status-paused { color: #f59e0b; }
+        .text-status-closed { color: #ef4444; }
+        
+        .border-status-active { border-color: #10b981; }
+        .border-status-paused { border-color: #f59e0b; }
+        .border-status-closed { border-color: #ef4444; }
+        
+        /* Current Customer Display */
+        .current-customer {
+            font-size: clamp(4rem, 15vw, 12rem);
+            font-weight: 900;
+            line-height: 1;
+            letter-spacing: -0.02em;
+        }
+        
+        /* Next Button */
+        .next-button {
+            background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
+            box-shadow: 
+                0 10px 40px rgba(16, 185, 129, 0.4),
+                inset 0 1px 0 rgba(255,255,255,0.2),
+                inset 0 -4px 0 rgba(0,0,0,0.1);
+            transition: all 0.15s ease;
+        }
+        
+        .next-button:active {
+            transform: scale(0.98) translateY(2px);
+            box-shadow: 
+                0 5px 20px rgba(16, 185, 129, 0.3),
+                inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .next-button.pulse {
+            animation: pulse-green 2s infinite;
+        }
+        
+        @keyframes pulse-green {
+            0%, 100% { box-shadow: 0 10px 40px rgba(16, 185, 129, 0.4); }
+            50% { box-shadow: 0 10px 60px rgba(16, 185, 129, 0.6), 0 0 0 20px rgba(16, 185, 129, 0.1); }
+        }
+        
+        /* Pause Button */
+        .pause-button {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+            transition: all 0.15s ease;
+        }
+        
+        .pause-button:active {
+            transform: scale(0.95);
+        }
+        
+        /* Glass Effect */
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .glass-dark {
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Waiting List Items */
+        .waiting-item {
+            background: rgba(255, 255, 255, 0.95);
+            border-left: 6px solid #e5e7eb;
+            transition: all 0.2s ease;
+        }
+        
+        .waiting-item:hover {
+            transform: translateX(-4px);
+            border-left-color: #10b981;
+        }
+        
+        /* Modal */
+        .modal-backdrop {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        
+        .modal-content {
+            animation: modal-in 0.3s ease;
+        }
+        
+        @keyframes modal-in {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+        
+        /* Status Badge Pulse */
+        .status-dot {
+            animation: dot-pulse 2s infinite;
+        }
+        
+        @keyframes dot-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Touch-friendly */
+        .touch-target {
+            min-height: 48px;
+            min-width: 48px;
+        }
+        
+        /* Fullscreen button */
+        .fullscreen-btn {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 50;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        
+        .fullscreen-btn:hover {
+            opacity: 1;
+        }
+        
+        /* Scrollbar hiding */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Stats Cards */
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.2s ease;
+        }
+        
+        .stat-card:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        /* Empty State Animation */
+        .empty-state {
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white">
+    <div class="kiosk-container" :class="{
+        'status-active': status === 'active',
+        'status-paused': status === 'paused',
+        'status-closed': status === 'closed'
+    }">
+        
+        <!-- Fullscreen Toggle Button -->
+        <button @click="toggleFullscreen()" 
+                class="fullscreen-btn touch-target p-3 rounded-xl glass text-white hover:bg-white/20"
+                title="Fullskjerm">
+            <i class="fas" :class="isFullscreen ? 'fa-compress' : 'fa-expand'"></i>
+        </button>
+
+        <!-- Top Stats Bar -->
+        <header class="px-6 py-4 glass border-b border-white/10">
+            <div class="flex items-center justify-between">
+                <!-- Queue Name & Status -->
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-4 h-4 rounded-full status-dot"
+                             :class="{
+                                 'bg-green-400': status === 'active',
+                                 'bg-yellow-400': status === 'paused',
+                                 'bg-red-400': status === 'closed'
+                             }">
+                        </div>
+                        <div>
+                            <h1 class="text-lg md:text-xl font-bold" x-text="queueName"></h1>
+                            <p class="text-xs md:text-sm opacity-70" x-text="statusText"></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Stats -->
+                <div class="flex items-center gap-2 md:gap-4">
+                    <div class="stat-card rounded-xl px-3 py-2 md:px-4 md:py-3 flex items-center gap-2 md:gap-3">
+                        <i class="fas fa-users text-lg md:text-xl opacity-70"></i>
+                        <div class="text-right">
+                            <p class="text-xs opacity-60 uppercase tracking-wider">Venter</p>
+                            <p class="text-xl md:text-2xl font-bold" x-text="waitingCount"></p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card rounded-xl px-3 py-2 md:px-4 md:py-3 flex items-center gap-2 md:gap-3">
+                        <i class="fas fa-check-circle text-lg md:text-xl opacity-70"></i>
+                        <div class="text-right">
+                            <p class="text-xs opacity-60 uppercase tracking-wider">Betjent</p>
+                            <p class="text-xl md:text-2xl font-bold" x-text="servedToday"></p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card rounded-xl px-3 py-2 md:px-4 md:gap-3 hidden sm:flex items-center gap-3">
+                        <i class="fas fa-clock text-lg md:text-xl opacity-70"></i>
+                        <div class="text-right">
+                            <p class="text-xs opacity-60 uppercase tracking-wider">Tid</p>
+                            <p class="text-lg md:text-xl font-bold font-mono" x-text="currentTime"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 flex flex-col md:flex-row overflow-hidden">
+            
+            <!-- Left: Current Customer & Next Button -->
+            <section class="flex-1 flex flex-col p-4 md:p-8 min-h-0">
+                
+                <!-- Current Customer Display -->
+                <div class="flex-1 flex flex-col items-center justify-center text-center mb-4 md:mb-6">
+                    <p class="text-sm md:text-lg uppercase tracking-widest opacity-60 mb-2 md:mb-4">Nåværende kunde</p>
+                    
+                    <div x-show="currentCustomer" class="w-full">
+                        <div class="current-customer" x-text="currentCustomer?.code || '—'"></div>
+                        <p class="text-xl md:text-3xl font-medium mt-2 md:mt-4 opacity-90" x-text="currentCustomer?.name || ''"></p>
+                        <div class="flex items-center justify-center gap-2 mt-2 text-sm opacity-60">
+                            <i class="fas fa-clock"></i>
+                            <span x-text="currentCustomer?.waitTime || ''"></span>
+                        </div>
+                    </div>
+                    
+                    <div x-show="!currentCustomer" class="empty-state">
+                        <div class="w-32 h-32 md:w-48 md:h-48 rounded-full glass flex items-center justify-center mb-4 md:mb-6 mx-auto">
+                            <i class="fas fa-pause text-5xl md:text-7xl opacity-40"></i>
+                        </div>
+                        <p class="text-xl md:text-2xl opacity-60">Ingen aktiv kunde</p>
+                        <p class="text-sm md:text-base opacity-40 mt-2">Trykk "Neste" for å kalle</p>
+                    </div>
+                </div>
+                
+                <!-- BIG Next Button -->
+                <button @click="showNextModal = true" 
+                        :disabled="status === 'closed' || waitingCount === 0"
+                        class="next-button w-full rounded-2xl md:rounded-3xl p-6 md:p-10 text-white font-bold touch-target
+                               flex flex-col items-center justify-center gap-2 md:gap-4
+                               disabled:opacity-30 disabled:cursor-not-allowed"
+                        :class="{ 'pulse': status === 'active' && waitingCount > 0 && !currentCustomer }">
+                    <i class="fas fa-arrow-right text-4xl md:text-6xl"></i>
+                    <span class="text-2xl md:text-4xl uppercase tracking-wider">Neste</span>
+                    <span class="text-sm md:text-lg opacity-70 font-normal" x-text="waitingCount > 0 ? waitingCount + ' venter' : 'Ingen venter'"></span>
+                </button>
+            </section>
+            
+            <!-- Right: Up Next List -->
+            <aside class="w-full md:w-80 lg:w-96 glass-dark border-t md:border-t-0 md:border-l border-white/10 p-4 md:p-6 flex flex-col">
+                <h2 class="text-sm md:text-lg font-bold uppercase tracking-wider opacity-70 mb-4 flex items-center gap-2">
+                    <i class="fas fa-list-ol"></i>
+                    Neste i kø
+                </h2>
+                
+                <div class="flex-1 overflow-y-auto no-scrollbar space-y-3">
+                    <!-- Next 3 in queue -->
+                    <template x-for="(ticket, index) in nextTickets" :key="ticket.id">
+                        <div class="waiting-item rounded-xl p-3 md:p-4 flex items-center gap-3 md:gap-4">
+                            <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-bold text-sm md:text-base">
+                                <span x-text="index + 1"></span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-bold text-gray-900 text-lg md:text-xl truncate" x-text="ticket.code"></p>
+                                <p class="text-sm text-gray-500 truncate" x-text="ticket.name || 'Ukjent'"></p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs text-gray-400" x-text="ticket.waitTime"></p>
+                            </div>
+                        </div>
+                    </template>
+                    
+                    <!-- Empty State -->
+                    <div x-show="nextTickets.length === 0" class="text-center py-8 md:py-12 opacity-40">
+                        <i class="fas fa-inbox text-4xl md:text-6xl mb-4"></i>
+                        <p class="text-base md:text-lg">Ingen venter i kø</p>
+                    </div>
+                    
+                    <!-- More indicator -->
+                    <div x-show="waitingCount > 3" class="text-center py-2 opacity-50 text-sm">
+                        <span x-text="'+' + (waitingCount - 3) + ' flere'"></span>
+                    </div>
+                </div>
+                
+                <!-- Pause/Resume Button -->
+                <div class="mt-4 pt-4 border-t border-white/10">
+                    <button @click="toggleStatus()" 
+                            class="pause-button w-full rounded-xl p-3 md:p-4 text-white font-bold touch-target
+                                   flex items-center justify-center gap-2 md:gap-3">
+                        <i class="fas" :class="status === 'paused' ? 'fa-play' : 'fa-pause'"></i>
+                        <span x-text="status === 'paused' ? 'Fortsett' : 'Pause'"></span>
+                    </button>
+                </div>
+            </aside>
+        </main>
+
+        <!-- Bottom Status Bar -->
+        <footer class="px-4 md:px-6 py-2 md:py-3 glass border-t border-white/10 text-xs md:text-sm">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4 md:gap-6">
+                    <span class="opacity-60 flex items-center gap-1 md:gap-2">
+                        <i class="fas fa-calendar"></i>
+                        <span x-text="currentDate"></span>
+                    </span>
+                    <span class="opacity-60 flex items-center gap-1 md:gap-2 sm:hidden">
+                        <i class="fas fa-clock"></i>
+                        <span x-text="currentTime"></span>
+                    </span>
+                    <span class="opacity-60 flex items-center gap-1 md:gap-2">
+                        <i class="fas fa-user-circle"></i>
+                        <span x-text="operatorName"></span>
+                    </span>
+                </div>
+                <div class="flex items-center gap-2 md:gap-4">
+                    <span class="opacity-60 flex items-center gap-1 md:gap-2">
+                        <i class="fas fa-wifi" :class="isOnline ? 'text-green-400' : 'text-red-400'"></i>
+                        <span x-text="isOnline ? 'Tilkoblet' : 'Frakoblet'"></span>
+                    </span>
+                    <button @click="openSettings" class="opacity-60 hover:opacity-100 touch-target p-2">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                </div>
+            </div>
+        </footer>
+
+        <!-- Confirmation Modal for Next -->
+        <div x-show="showNextModal" 
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-100"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             class="fixed inset-0 z-50 flex items-center justify-center modal-backdrop"
+             style="display: none;">
+            
+            <div @click.away="showNextModal = false" 
+                 class="modal-content bg-white rounded-2xl md:rounded-3xl p-6 md:p-10 max-w-md w-full mx-4 text-gray-900 shadow-2xl">
+                
+                <div class="text-center">
+                    <div class="w-16 h-16 md:w-20 md:h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4 md:mb-6">
+                        <i class="fas fa-arrow-right text-3xl md:text-4xl text-green-600"></i>
+                    </div>
+                    
+                    <h3 class="text-xl md:text-2xl font-bold mb-2">Kalle neste kunde?</h3>
+                    <p class="text-gray-500 mb-6 md:mb-8">
+                        <span x-show="nextTickets.length > 0">
+                            Neste: <strong x-text="nextTickets[0]?.code"></strong> 
+                            <span x-text="nextTickets[0]?.name ? '(' + nextTickets[0].name + ')' : ''"></span>
+                        </span>
+                    </p>
+                    
+                    <div class="flex gap-3 md:gap-4">
+                        <button @click="showNextModal = false" 
+                                class="flex-1 py-3 md:py-4 px-4 md:px-6 rounded-xl bg-gray-100 text-gray-700 font-semibold touch-target
+                                       hover:bg-gray-200 transition-colors">
+                            Avbryt
+                        </button>
+                        <button @click="callNext()" 
+                                class="flex-1 py-3 md:py-4 px-4 md:px-6 rounded-xl bg-green-500 text-white font-semibold touch-target
+                                       hover:bg-green-600 transition-colors flex items-center justify-center gap-2">
+                            <span x-show="loading" class="spinner-small border-white/30 border-t-white"></span>
+                            <span x-text="loading ? 'Kaller...' : 'Bekreft'"></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div x-show="showSettings" 
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-100"
+             class="fixed inset-0 z-50 flex items-center justify-center modal-backdrop"
+             style="display: none;">
+            
+            <div @click.away="showSettings = false" 
+                 class="modal-content bg-white rounded-2xl md:rounded-3xl p-6 max-w-sm w-full mx-4 text-gray-900 shadow-2xl">
+                
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-bold">Innstillinger</h3>
+                    <button @click="showSettings = false" class="p-2 hover:bg-gray-100 rounded-lg">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="space-y-4">
+                    <button @click="toggleFullscreen()" 
+                            class="w-full p-4 rounded-xl bg-gray-50 hover:bg-gray-100 flex items-center gap-3 transition-colors">
+                        <i class="fas" :class="isFullscreen ? 'fa-compress' : 'fa-expand'"></i>
+                        <span x-text="isFullscreen ? 'Avslutt fullskjerm' : 'Fullskjerm-modus'"></span>
+                    </button>
+                    
+                    <button @click="toggleStatus()" 
+                            class="w-full p-4 rounded-xl hover:bg-gray-100 flex items-center gap-3 transition-colors"
+                            :class="status === 'closed' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'">
+                        <i class="fas" :class="status === 'closed' ? 'fa-door-open' : 'fa-door-closed'"></i>
+                        <span x-text="status === 'closed' ? 'Åpne kø' : 'Steng kø'"></span>
+                    </button>
+                    
+                    <a href="/dashboard" class="w-full p-4 rounded-xl bg-gray-50 hover:bg-gray-100 flex items-center gap-3 transition-colors">
+                        <i class="fas fa-arrow-left"></i>
+                        <span>Tilbake til dashboard</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notification -->
+        <div x-show="toast.show"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 translate-y-4"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             x-transition:leave="transition ease-in duration-100"
+             x-transition:leave-start="opacity-100 translate-y-0"
+             x-transition:leave-end="opacity-0 translate-y-4"
+             class="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-xl shadow-lg font-medium"
+             :class="toast.type === 'success' ? 'bg-green-500 text-white' : 
+                     toast.type === 'error' ? 'bg-red-500 text-white' : 'bg-gray-800 text-white'"
+             style="display: none;">
+            <div class="flex items-center gap-2">
+                <i class="fas" :class="toast.type === 'success' ? 'fa-check-circle' : 
+                                      toast.type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'"></i>
+                <span x-text="toast.message"></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function kioskOperator() {
+            return {
+                // State
+                status: 'active', // 'active', 'paused', 'closed'
+                queueName: 'Hovedkø',
+                operatorName: 'Operatør',
+                isFullscreen: false,
+                isOnline: navigator.onLine,
+                loading: false,
+                showNextModal: false,
+                showSettings: false,
+                
+                // Time
+                currentTime: '',
+                currentDate: '',
+                timeInterval: null,
+                
+                // Data
+                currentCustomer: {
+                    code: 'A-042',
+                    name: 'Ola Nordmann',
+                    waitTime: 'Venter 5 min'
+                },
+                waitingCount: 7,
+                servedToday: 42,
+                nextTickets: [
+                    { id: 1, code: 'A-043', name: 'Kari Hansen', waitTime: '12 min' },
+                    { id: 2, code: 'A-044', name: 'Per Olsen', waitTime: '18 min' },
+                    { id: 3, code: 'A-045', name: null, waitTime: '25 min' }
+                ],
+                
+                // Toast
+                toast: {
+                    show: false,
+                    message: '',
+                    type: 'info'
+                },
+
+                init() {
+                    this.updateTime();
+                    this.timeInterval = setInterval(() => this.updateTime(), 1000);
+                    
+                    // Listen for online/offline
+                    window.addEventListener('online', () => this.isOnline = true);
+                    window.addEventListener('offline', () => this.isOnline = false);
+                    
+                    // Listen for fullscreen changes
+                    document.addEventListener('fullscreenchange', () => {
+                        this.isFullscreen = !!document.fullscreenElement;
+                    });
+                    
+                    // Prevent sleep (if supported)
+                    if ('wakeLock' in navigator) {
+                        this.requestWakeLock();
+                    }
+                    
+                    // Keyboard shortcuts
+                    document.addEventListener('keydown', (e) => {
+                        if (e.code === 'Space' && !this.showNextModal && !this.showSettings) {
+                            e.preventDefault();
+                            if (this.status !== 'closed' && this.waitingCount > 0) {
+                                this.showNextModal = true;
+                            }
+                        }
+                        if (e.code === 'Escape') {
+                            this.showNextModal = false;
+                            this.showSettings = false;
+                        }
+                        if (e.code === 'KeyF' && e.ctrlKey) {
+                            e.preventDefault();
+                            this.toggleFullscreen();
+                        }
+                    });
+                },
+                
+                get statusText() {
+                    const texts = {
+                        'active': 'Køen er åpen',
+                        'paused': 'Køen er satt på pause',
+                        'closed': 'Køen er stengt'
+                    };
+                    return texts[this.status] || '';
+                },
+                
+                updateTime() {
+                    const now = new Date();
+                    this.currentTime = now.toLocaleTimeString('no-NO', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    });
+                    this.currentDate = now.toLocaleDateString('no-NO', { 
+                        weekday: 'short', 
+                        day: 'numeric', 
+                        month: 'short' 
+                    });
+                },
+                
+                async toggleFullscreen() {
+                    if (!document.fullscreenElement) {
+                        try {
+                            await document.documentElement.requestFullscreen();
+                            this.isFullscreen = true;
+                        } catch (err) {
+                            console.log('Fullscreen not supported');
+                        }
+                    } else {
+                        document.exitFullscreen();
+                        this.isFullscreen = false;
+                    }
+                },
+                
+                async requestWakeLock() {
+                    try {
+                        this.wakeLock = await navigator.wakeLock.request('screen');
+                    } catch (err) {
+                        console.log('Wake Lock not supported');
+                    }
+                },
+                
+                toggleStatus() {
+                    const states = ['active', 'paused', 'closed'];
+                    const currentIndex = states.indexOf(this.status);
+                    this.status = states[(currentIndex + 1) % states.length];
+                    this.showToast(`Kø status: ${this.statusText}`, 'success');
+                },
+                
+                openSettings() {
+                    this.showSettings = true;
+                },
+                
+                async callNext() {
+                    this.loading = true;
+                    
+                    // Simulate API call
+                    await new Promise(r => setTimeout(r, 800));
+                    
+                    // Move current to served (in real app, this would be API response)
+                    if (this.currentCustomer) {
+                        this.servedToday++;
+                    }
+                    
+                    // Get next from queue
+                    if (this.nextTickets.length > 0) {
+                        this.currentCustomer = {
+                            ...this.nextTickets[0],
+                            waitTime: 'Akkurat kalt'
+                        };
+                        this.nextTickets.shift();
+                        this.waitingCount = Math.max(0, this.waitingCount - 1);
+                        
+                        // Add mock new ticket to keep demo interesting
+                        if (Math.random() > 0.3) {
+                            setTimeout(() => {
+                                const newCode = 'A-0' + (45 + Math.floor(Math.random() * 100));
+                                this.nextTickets.push({
+                                    id: Date.now(),
+                                    code: newCode,
+                                    name: Math.random() > 0.5 ? 'Ny Kunde' : null,
+                                    waitTime: 'Akkurat ankommet'
+                                });
+                                this.waitingCount++;
+                            }, 3000);
+                        }
+                    } else {
+                        this.currentCustomer = null;
+                    }
+                    
+                    this.loading = false;
+                    this.showNextModal = false;
+                    this.showToast('Neste kunde kalt!', 'success');
+                },
+                
+                showToast(message, type = 'info') {
+                    this.toast = { show: true, message, type };
+                    setTimeout(() => this.toast.show = false, 3000);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
