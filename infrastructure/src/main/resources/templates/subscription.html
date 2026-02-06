@@ -212,27 +212,13 @@
                 <p class="description" th:text="#{subscription.plan.free.desc}">Perfect for trying out</p>
                 <ul>
                     <li th:text="#{subscription.plan.free.feature1}">1 queue</li>
-                    <li th:text="#{subscription.plan.free.feature2}">No operators</li>
+                    <li th:text="#{subscription.plan.free.feature2}">1 counter</li>
                     <li th:text="#{subscription.plan.free.feature3}">50 tickets/day</li>
-                    <li th:text="#{subscription.plan.free.feature4}">Basic features</li>
+                    <li th:text="#{subscription.plan.free.feature4}">QR code generation</li>
+                    <li th:text="#{subscription.plan.free.feature5}">Real-time updates</li>
                 </ul>
                 <button class="btn btn-secondary" disabled th:if="${subscription.tier.name() == 'FREE'}" th:text="#{subscription.currentPlanBtn}">Current Plan</button>
                 <button class="btn btn-outline" th:unless="${subscription.tier.name() == 'FREE'}" th:text="#{subscription.downgrade}">Downgrade</button>
-            </div>
-
-            <!-- STARTER Plan -->
-            <div class="plan-card" th:classappend="${subscription.tier.name() == 'STARTER' ? 'current' : ''}">
-                <h4 th:text="#{subscription.plan.starter}">Starter</h4>
-                <div class="price">$9<span th:text="#{subscription.perMonth}">/month</span></div>
-                <p class="description" th:text="#{subscription.plan.starter.desc}">For small businesses</p>
-                <ul>
-                    <li th:text="#{subscription.plan.starter.feature1}">3 queues</li>
-                    <li th:text="#{subscription.plan.starter.feature2}">2 operators per queue</li>
-                    <li th:text="#{subscription.plan.starter.feature3}">200 tickets/day</li>
-                    <li th:text="#{subscription.plan.starter.feature4}">Email notifications</li>
-                </ul>
-                <button class="btn btn-secondary" disabled th:if="${subscription.tier.name() == 'STARTER'}" th:text="#{subscription.currentPlanBtn}">Current Plan</button>
-                <button class="btn btn-primary" th:unless="${subscription.tier.name() == 'STARTER'}" @click="upgrade('STARTER')" th:text="#{subscription.upgrade}">Upgrade</button>
             </div>
 
             <!-- PRO Plan -->
@@ -246,6 +232,8 @@
                     <li th:text="#{subscription.plan.pro.feature2}">10 operators per queue</li>
                     <li th:text="#{subscription.plan.pro.feature3}">Unlimited tickets</li>
                     <li th:text="#{subscription.plan.pro.feature4}">Custom branding</li>
+                    <li th:text="#{subscription.plan.pro.feature5}">Analytics</li>
+                    <li th:text="#{subscription.plan.pro.feature6}">Email notifications</li>
                 </ul>
                 <button class="btn btn-secondary" disabled th:if="${subscription.tier.name() == 'PRO'}" th:text="#{subscription.currentPlanBtn}">Current Plan</button>
                 <button class="btn btn-primary" th:unless="${subscription.tier.name() == 'PRO'}" @click="upgrade('PRO')" th:text="#{subscription.upgrade}">Upgrade</button>
@@ -257,10 +245,12 @@
                 <div class="price">$99<span th:text="#{subscription.perMonth}">/month</span></div>
                 <p class="description" th:text="#{subscription.plan.enterprise.desc}">For large organizations</p>
                 <ul>
-                    <li th:text="#{subscription.plan.enterprise.feature1}">Unlimited queues</li>
-                    <li th:text="#{subscription.plan.enterprise.feature2}">Unlimited operators</li>
-                    <li th:text="#{subscription.plan.enterprise.feature3}">Priority support</li>
-                    <li th:text="#{subscription.plan.enterprise.feature4}">Custom integrations</li>
+                    <li th:text="#{subscription.plan.enterprise.feature1}">Everything in Pro</li>
+                    <li th:text="#{subscription.plan.enterprise.feature2}">Unlimited queues</li>
+                    <li th:text="#{subscription.plan.enterprise.feature3}">Unlimited operators</li>
+                    <li th:text="#{subscription.plan.enterprise.feature4}">API access</li>
+                    <li th:text="#{subscription.plan.enterprise.feature5}">Priority support</li>
+                    <li th:text="#{subscription.plan.enterprise.feature6}">Custom integrations</li>
                 </ul>
                 <button class="btn btn-secondary" disabled th:if="${subscription.tier.name() == 'ENTERPRISE'}" th:text="#{subscription.currentPlanBtn}">Current Plan</button>
                 <button class="btn btn-primary" th:unless="${subscription.tier.name() == 'ENTERPRISE'}" @click="upgrade('ENTERPRISE')" th:text="#{subscription.upgrade}">Upgrade</button>
