@@ -563,46 +563,58 @@
             }
             
             // Connect to ntfy for real-time updates
+            var ntfyEventSource = null;
+            var ntfyReconnectTimeout = null;
+            var ntfyReconnectDelay = 5000;
+
             function connectNtfy() {
                 const ntfyUrl = `https://ntfy.knobo.no/queue-${queueId}/sse`;
                 console.log('Connecting to ntfy:', ntfyUrl);
-                
-                const eventSource = new EventSource(ntfyUrl);
-                
-                eventSource.onopen = function() {
-                    console.log('Connected to ntfy');
-                };
-                
-                eventSource.onerror = function(error) {
-                    console.error('ntfy connection error:', error);
-                };
-                
-                eventSource.onmessage = function(event) {
-                    try {
-                        const data = JSON.parse(event.data);
-                        console.log('Received ntfy event:', data);
-                        
-                        if (data.event === 'token_rotated') {
-                            console.log('Token rotated via ntfy, fetching new token');
-                            fetchTokenStatus();
-                        } else if (data.event === 'queue_status_changed') {
-                            console.log('Queue status changed:', data.open);
-                            updateQueueStatus(data.open);
-                        } else if (data.event === 'ticket_created') {
-                            console.log('New ticket created');
-                            showWelcomeAnimation();
+
+                try {
+                    ntfyEventSource = new EventSource(ntfyUrl);
+
+                    ntfyEventSource.onopen = function() {
+                        console.log('Connected to ntfy');
+                        ntfyReconnectDelay = 5000;
+                    };
+
+                    ntfyEventSource.onerror = function() {
+                        console.warn('ntfy connection lost, reconnecting in', ntfyReconnectDelay/1000, 's');
+                        if (ntfyEventSource) ntfyEventSource.close();
+                        ntfyReconnectTimeout = setTimeout(function() {
+                            ntfyReconnectDelay = Math.min(ntfyReconnectDelay * 2, 60000);
+                            connectNtfy();
+                        }, ntfyReconnectDelay);
+                    };
+
+                    ntfyEventSource.onmessage = function(event) {
+                        try {
+                            const data = JSON.parse(event.data);
+                            console.log('Received ntfy event:', data);
+
+                            if (data.event === 'token_rotated') {
+                                console.log('Token rotated via ntfy, fetching new token');
+                                fetchTokenStatus();
+                            } else if (data.event === 'queue_status_changed') {
+                                console.log('Queue status changed:', data.open);
+                                updateQueueStatus(data.open);
+                            } else if (data.event === 'ticket_created') {
+                                console.log('New ticket created');
+                                showWelcomeAnimation();
+                            }
+                        } catch (e) {
+                            // ntfy kan sende keepalive meldinger som ikke er JSON
                         }
-                    } catch (e) {
-                        // ntfy kan sende keepalive meldinger som ikke er JSON
-                        if (event.data && event.data.trim()) {
-                            console.log('Non-JSON ntfy message:', event.data);
-                        }
-                    }
-                };
-                
+                    };
+                } catch (e) {
+                    console.error('Failed to connect ntfy:', e);
+                }
+
                 // Cleanup on page unload
                 window.addEventListener('beforeunload', function() {
-                    eventSource.close();
+                    if (ntfyEventSource) ntfyEventSource.close();
+                    if (ntfyReconnectTimeout) clearTimeout(ntfyReconnectTimeout);
                 });
             }
             
