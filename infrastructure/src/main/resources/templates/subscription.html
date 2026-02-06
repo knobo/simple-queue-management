@@ -208,7 +208,7 @@
             <!-- FREE Plan -->
             <div class="plan-card" th:classappend="${subscription.tier.name() == 'FREE' ? 'current' : ''}">
                 <h4 th:text="#{subscription.plan.free}">Free</h4>
-                <div class="price">$0<span th:text="#{subscription.perMonth}">/month</span></div>
+                <div class="price">0 kr<span th:text="#{subscription.perMonth}">/month</span></div>
                 <p class="description" th:text="#{subscription.plan.free.desc}">Perfect for trying out</p>
                 <ul>
                     <li th:text="#{subscription.plan.free.feature1}">1 queue</li>
@@ -225,7 +225,7 @@
             <div class="plan-card popular" th:classappend="${subscription.tier.name() == 'PRO' ? 'current' : ''}">
                 <span class="popular-badge" th:text="#{subscription.mostPopular}">Most Popular</span>
                 <h4 th:text="#{subscription.plan.pro}">Pro</h4>
-                <div class="price">$29<span th:text="#{subscription.perMonth}">/month</span></div>
+                <div class="price">299 kr<span th:text="#{subscription.perMonth}">/month</span></div>
                 <p class="description" th:text="#{subscription.plan.pro.desc}">For growing businesses</p>
                 <ul>
                     <li th:text="#{subscription.plan.pro.feature1}">10 queues</li>
@@ -242,7 +242,7 @@
             <!-- ENTERPRISE Plan -->
             <div class="plan-card" th:classappend="${subscription.tier.name() == 'ENTERPRISE' ? 'current' : ''}">
                 <h4 th:text="#{subscription.plan.enterprise}">Enterprise</h4>
-                <div class="price">$99<span th:text="#{subscription.perMonth}">/month</span></div>
+                <div class="price">999 kr<span th:text="#{subscription.perMonth}">/month</span></div>
                 <p class="description" th:text="#{subscription.plan.enterprise.desc}">For large organizations</p>
                 <ul>
                     <li th:text="#{subscription.plan.enterprise.feature1}">Everything in Pro</li>

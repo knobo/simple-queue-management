@@ -247,17 +247,16 @@ class StripePaymentGateway(
     private fun getPriceId(tier: SubscriptionTier): String? =
         when (tier) {
             SubscriptionTier.FREE -> null
-            SubscriptionTier.STARTER -> config.prices.starter
+            SubscriptionTier.STARTER -> config.prices.pro // STARTER no longer sold, map to PRO
             SubscriptionTier.PRO -> config.prices.pro
             SubscriptionTier.ENTERPRISE -> config.prices.enterprise
         }
 
     private fun determineTierFromPriceId(priceId: String?): SubscriptionTier =
         when (priceId) {
-            config.prices.starter -> SubscriptionTier.STARTER
             config.prices.pro -> SubscriptionTier.PRO
             config.prices.enterprise -> SubscriptionTier.ENTERPRISE
-            else -> SubscriptionTier.STARTER // Default to starter if unknown
+            else -> SubscriptionTier.FREE
         }
 
     private fun mapStripeStatus(status: String?): Subscription.SubscriptionStatus =

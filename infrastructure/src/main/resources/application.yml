@@ -74,7 +74,7 @@ stripe:
     default-country: ${STRIPE_CONNECT_DEFAULT_COUNTRY:NO}
     supported-countries: ${STRIPE_CONNECT_SUPPORTED_COUNTRIES:NO,SE,DK,FI,DE,GB,US}
   prices:
-    starter: ${STRIPE_PRICE_STARTER:price_1SvabCJpRTNhfgZpd1R2of7C}
+    starter: ${STRIPE_PRICE_STARTER:} # discontinued
     pro: ${STRIPE_PRICE_PRO:price_1SvabYJpRTNhfgZp194NchTA}
     enterprise: ${STRIPE_PRICE_ENTERPRISE:price_1SvabqJpRTNhfgZpJjLW7uzi}
 
