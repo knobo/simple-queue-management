@@ -281,58 +281,73 @@
     <script th:inline="javascript">
         /*<![CDATA[*/
         const queueId = /*[[${queue.id}]]*/ '';
-        const ntfyUrl = `https://ntfy.knobo.no/queue-${queueId}/sse`;
-        
-        console.log('Connecting to ntfy for kiosk:', ntfyUrl);
-        
-        // Connect to ntfy SSE for real-time updates
-        const eventSource = new EventSource(ntfyUrl);
-        
-        eventSource.onopen = () => {
-            console.log('Connected to ntfy');
-        };
-        
-        eventSource.onerror = (error) => {
-            console.error('ntfy connection error:', error);
-        };
-        
-        eventSource.onmessage = (event) => {
+        var ntfyEventSource = null;
+        var ntfyReconnectTimeout = null;
+        var ntfyReconnectDelay = 5000;
+
+        function connectNtfy() {
+            const ntfyUrl = `https://ntfy.knobo.no/queue-${queueId}/sse`;
+            console.log('Connecting to ntfy for kiosk:', ntfyUrl);
+
             try {
-                const data = JSON.parse(event.data);
-                console.log('Received ntfy event:', data);
-                
-                // Handle different event types
-                if (data.event === 'token_rotated') {
-                    console.log('Token rotated, triggering HTMX refresh...');
-                    // Trigger HTMX to refresh immediately
-                    document.getElementById('qr-code-wrapper').dispatchEvent(new Event('refresh'));
-                } else if (data.event === 'queue_status_changed') {
-                    console.log('Queue status changed:', data.open);
-                    // Reload page to show updated status
-                    window.location.reload();
-                } else if (data.event === 'ticket_created') {
-                    console.log('New ticket created');
-                    showWelcomeAnimation();
-                }
+                ntfyEventSource = new EventSource(ntfyUrl);
+
+                ntfyEventSource.onopen = () => {
+                    console.log('Connected to ntfy');
+                    ntfyReconnectDelay = 5000;
+                };
+
+                ntfyEventSource.onerror = () => {
+                    console.warn('ntfy connection lost, reconnecting in', ntfyReconnectDelay/1000, 's');
+                    if (ntfyEventSource) ntfyEventSource.close();
+                    ntfyReconnectTimeout = setTimeout(() => {
+                        ntfyReconnectDelay = Math.min(ntfyReconnectDelay * 2, 60000);
+                        connectNtfy();
+                    }, ntfyReconnectDelay);
+                };
+
+                ntfyEventSource.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        console.log('Received ntfy event:', data);
+
+                        if (data.event === 'token_rotated') {
+                            console.log('Token rotated, triggering HTMX refresh...');
+                            document.getElementById('qr-code-wrapper').dispatchEvent(new Event('refresh'));
+                        } else if (data.event === 'queue_status_changed') {
+                            console.log('Queue status changed:', data.open);
+                            window.location.reload();
+                        } else if (data.event === 'ticket_created') {
+                            console.log('New ticket created');
+                            showWelcomeAnimation();
+                        }
+                    } catch (e) {
+                        // Keep-alive or non-JSON message
+                    }
+                };
             } catch (e) {
-                console.error('Error parsing ntfy message:', e);
+                console.error('Failed to connect ntfy:', e);
             }
-        };
-        
+        }
+
         function showWelcomeAnimation() {
             const animation = document.getElementById('welcomeAnimation');
             animation.classList.add('show');
-            
+
             setTimeout(() => {
                 animation.classList.remove('show');
             }, 2000);
         }
-        
+
+        // Initialize
+        connectNtfy();
+
         // Cleanup on page unload
         window.addEventListener('beforeunload', () => {
-            eventSource.close();
+            if (ntfyEventSource) ntfyEventSource.close();
+            if (ntfyReconnectTimeout) clearTimeout(ntfyReconnectTimeout);
         });
-        
+
         // Manual refresh button (for debugging)
         document.addEventListener('keydown', (e) => {
             if (e.key === 'r' && e.ctrlKey) {

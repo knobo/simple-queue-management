@@ -290,42 +290,70 @@
             document.getElementById('turn-alert').style.display = 'block';
         }
 
-        // Listen to Ntfy
-        const eventSource = new EventSource('https://ntfy.knobo.no/' + queueTopic + '/sse');
-        eventSource.onmessage = (event) => {
-            console.log("Ntfy update:", event.data);
+        // Listen to Ntfy with reconnection
+        var ntfyEventSource = null;
+        var ntfyReconnectTimeout = null;
+        var ntfyReconnectDelay = 5000;
+
+        function connectNtfy() {
+            const ntfyUrl = 'https://ntfy.knobo.no/' + queueTopic + '/sse';
+            console.log('Connecting to ntfy:', ntfyUrl);
+
             try {
-                const data = JSON.parse(event.data);
-                // Look for JSON payload from backend
-                // Backend sends: {"status":"serving", "number":105}
-                // or just raw text message might be sent sometimes?
-                // `event.data` from ntfy wraps the actual message in `message` field if using streaming?
-                // Wait, ntfy SSE returns JSON object: { id, time, event, topic, message, ... }
-                // Content is in `data.message`.
+                ntfyEventSource = new EventSource(ntfyUrl);
 
-                if (data.event === 'message') {
-                     const payload = JSON.parse(data.message);
-                     if (payload.status === 'serving') {
-                         const servingNum = payload.number;
-                         document.getElementById('nowServing').innerText = servingNum;
-                         currentLastCalled = servingNum;
-                         updateEst(servingNum);
+                ntfyEventSource.onopen = () => {
+                    console.log('Connected to ntfy');
+                    ntfyReconnectDelay = 5000;
+                };
 
-                         if (servingNum === ticketNumber) {
-                             document.getElementById('turn-alert').style.display = 'block';
-                             document.querySelector('.status-badge').innerText = 'CALLED';
-                             document.querySelector('.status-badge').classList.remove('WAITING');
-                             document.querySelector('.status-badge').classList.add('CALLED');
+                ntfyEventSource.onerror = () => {
+                    console.warn('ntfy connection lost, reconnecting in', ntfyReconnectDelay/1000, 's');
+                    if (ntfyEventSource) ntfyEventSource.close();
+                    ntfyReconnectTimeout = setTimeout(() => {
+                        ntfyReconnectDelay = Math.min(ntfyReconnectDelay * 2, 60000);
+                        connectNtfy();
+                    }, ntfyReconnectDelay);
+                };
 
-                             // Vibrate or sound?
-                             if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
-                         }
-                     }
-                }
+                ntfyEventSource.onmessage = (event) => {
+                    console.log("Ntfy update:", event.data);
+                    try {
+                        const data = JSON.parse(event.data);
+
+                        if (data.event === 'message') {
+                             const payload = JSON.parse(data.message);
+                             if (payload.status === 'serving') {
+                                 const servingNum = payload.number;
+                                 document.getElementById('nowServing').innerText = servingNum;
+                                 currentLastCalled = servingNum;
+                                 updateEst(servingNum);
+
+                                 if (servingNum === ticketNumber) {
+                                     document.getElementById('turn-alert').style.display = 'block';
+                                     document.querySelector('.status-badge').innerText = 'CALLED';
+                                     document.querySelector('.status-badge').classList.remove('WAITING');
+                                     document.querySelector('.status-badge').classList.add('CALLED');
+
+                                     if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
+                                 }
+                             }
+                        }
+                    } catch (e) {
+                        // Keep-alive or non-JSON message
+                    }
+                };
             } catch (e) {
-                console.warn("Failed to parse ntfy message", e);
+                console.error('Failed to connect ntfy:', e);
             }
-        };
+        }
+
+        connectNtfy();
+
+        window.addEventListener('beforeunload', () => {
+            if (ntfyEventSource) ntfyEventSource.close();
+            if (ntfyReconnectTimeout) clearTimeout(ntfyReconnectTimeout);
+        });
 
         // === Kiosk Mode: Smart Auto-close countdown ===
         if (autoCloseSeconds && autoCloseSeconds > 0) {
