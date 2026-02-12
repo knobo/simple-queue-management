@@ -286,7 +286,10 @@
         var ntfyReconnectDelay = 5000;
 
         function connectNtfy() {
-            const ntfyUrl = `https://ntfy.knobo.no/queue-${queueId}/sse`;
+            const ntfyAuth = /*[[${ntfyAuth}]]*/ '';
+            const authParam = ntfyAuth ? `?auth=${ntfyAuth}` : '';
+            const ntfyServerUrl = /*[[${ntfyServerUrl}]]*/ 'https://ntfy.knobo.no';
+            const ntfyUrl = `${ntfyServerUrl}/queue-${queueId}/sse${authParam}`;
             console.log('Connecting to ntfy for kiosk:', ntfyUrl);
 
             try {

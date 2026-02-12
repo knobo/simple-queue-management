@@ -65,7 +65,7 @@ jobs:
           
           # Send notification with commit message
           # Format: "commit_message (short_sha)"
-          curl -X POST https://ntfy.knobo.no/k8s-deploy \
+          curl -X POST https://ntfy.nextivo.app/k8s-deploy \
             -H "Authorization: Bearer ${{ secrets.NTFY_DEPLOY_TOKEN }}" \
             -H "Title: Deploy simple-queue-management" \
             -H "Tags: rocket" \
