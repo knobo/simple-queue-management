@@ -121,12 +121,12 @@
             <span th:text="#{ticket.status.your_turn}">IT'S YOUR TURN! PLEASE PROCEED TO THE COUNTER.</span>
         </div>
 
-        <a th:href="'ntfy://ntfy.knobo.no/' + ${queueTopic}" class="ntfy-link">
+        <a th:href="'ntfy://' + ${ntfyServerUrl.replace('https://', '')} + '/' + ${queueTopic}" class="ntfy-link">
             <span th:text="#{ticket.status.open_ntfy}">Open in Ntfy App 🔔</span>
         </a>
 
         <div style="margin-top: 15px; font-size: 0.9em;">
-             <a th:href="'https://ntfy.knobo.no/' + ${queueTopic}" target="_blank" style="color: #666; text-decoration: underline;">
+             <a th:href="${ntfyServerUrl} + '/' + ${queueTopic}" target="_blank" style="color: #666; text-decoration: underline;">
                 <span th:text="#{ticket.status.view_browser}">Or view notifications in browser</span>
             </a>
         </div>
@@ -296,7 +296,10 @@
         var ntfyReconnectDelay = 5000;
 
         function connectNtfy() {
-            const ntfyUrl = 'https://ntfy.knobo.no/' + queueTopic + '/sse';
+            const ntfyAuth = /*[[${ntfyAuth}]]*/ '';
+            const authParam = ntfyAuth ? `?auth=${ntfyAuth}` : '';
+            const ntfyServerUrl = /*[[${ntfyServerUrl}]]*/ 'https://ntfy.knobo.no';
+            const ntfyUrl = ntfyServerUrl + '/' + queueTopic + '/sse' + authParam;
             console.log('Connecting to ntfy:', ntfyUrl);
 
             try {

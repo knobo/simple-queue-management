@@ -61,7 +61,8 @@ keycloak:
     client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET:}
 
 ntfy:
-  url: https://ntfy.knobo.no
+  url: ${NTFY_URL:https://ntfy.knobo.no}
+  server-url: ${NTFY_SERVER_URL:${ntfy.url}}
   username: ${NTFY_USERNAME:}
   password: ${NTFY_PASSWORD:}
 

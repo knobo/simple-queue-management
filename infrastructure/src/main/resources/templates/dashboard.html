@@ -165,7 +165,8 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
 
     <script th:inline="javascript">
-        const ntfyUrl = /*[[${ntfyUrl}]]*/ 'https://ntfy.sh';
+        const ntfyUrl = /*[[${ntfyServerUrl}]]*/ 'https://ntfy.knobo.no';
+        const ntfyAuth = /*[[${ntfyAuth}]]*/ '';
         const i18n = {
             nextTicketCalled: /*[[#{dashboard.nextTicketCalled}]]*/ 'Next ticket called!',
             failedToCallNext: /*[[#{dashboard.failedToCallNext}]]*/ 'Failed to call next',
@@ -233,7 +234,8 @@
                     
                     if (this.topic) {
                          const baseUrl = ntfyUrl.endsWith('/') ? ntfyUrl.slice(0, -1) : ntfyUrl;
-                         const sseUrl = `${baseUrl}/${this.topic}/sse`;
+                         const authParam = ntfyAuth ? `?auth=${ntfyAuth}` : '';
+                         const sseUrl = `${baseUrl}/${this.topic}/sse${authParam}`;
 
                          console.log(`Listening to ${sseUrl}`);
                          const eventSource = new EventSource(sseUrl);
